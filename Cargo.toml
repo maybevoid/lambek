@@ -1,0 +1,7 @@
+[package]
+name = "wunderkind"
+version = "0.1.0"
+authors = ["Soares Chen <soares.chen@maybevoid.com>"]
+edition = "2018"
+
+[dependencies]
