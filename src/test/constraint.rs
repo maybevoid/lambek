@@ -1,50 +1,48 @@
 use std::fmt::Display;
+use std::marker::PhantomData;
+
 use crate::constraint::*;
 use crate::send::*;
 
 #[test]
 pub fn test_send_constraint () {
-  fn use_send_1 < 'a, X > ( x: &'a X ) -> ()
+  struct UseSend < 'a, X > ( PhantomData < &'a X > );
+
+  impl < 'a, X >
+    SendCont < X, fn (&'a X) >
+    for UseSend < 'a, X >
   where
-    X: Display,
-    X: Send,
+    X: Display
   {
-    println!("X: {}", x);
+    fn on_send ( self: Box < Self > )
+      -> fn (&'a X)
+    where
+      X: Send
+    {
+      Self::use_send_1
+    }
   }
 
-  fn use_send < 'a, X > ( x: &'a X )
+  impl < 'a, X >
+    UseSend < 'a, X >
   where
     X: Display,
-    X: HasConstraint < SendConstraint, ContF = SendContF < X > >,
   {
-    struct Cont < 'a, X >
+    fn use_send_1 ( x: &'a X )
     where
-      X: Display
+      X: Send,
     {
-      x: &'a X
+      println!("X: {}", x);
     }
 
-    impl < 'a, X >
-      SendCont < X, () >
-      for Cont < 'a, X >
+    fn use_send ( x: &'a X )
     where
-      X: Display
+      X: HasConstraint < SendConstraint, ContF = SendContF < X > >,
     {
-      fn on_send ( self: Box < Self > )
-      where
-        X: Send
-      {
-        use_send_1 ( self.x )
-      }
+      with_send_constraint( UseSend (PhantomData) )
+      ( x )
     }
-
-    let cont :
-      Box < dyn SendCont < X, () > + '_ > =
-      Box::new(Cont { x });
-
-    < X as HasConstraint < SendConstraint >
-    > :: with_constraint ( Box::new(cont) );
   }
 
-  use_send ( &"Hello World".to_string() );
+  UseSend::use_send ( &"Hello World".to_string() );
 }

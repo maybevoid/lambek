@@ -4,6 +4,7 @@ use super::type_app::*;
 use super::constraint::*;
 
 pub enum SendConstraint {}
+
 pub struct SendContF < X > ( PhantomData < X > );
 
 pub trait SendCont < X, R > {
@@ -57,19 +58,33 @@ where
   }
 }
 
-#[macro_export]
-macro_rules! wrap_send_func {
-  (
-    fn $name:ident
-      < $( $lifetime_param:lifetime $(,)? )* $(,)?
-        $( $type_param:ident $(,)? )*
-      >
-    where
-      $( $type_spec:ty : $constraint:tt $(,)? )*
-    deriving ( $constraint_type:ty )
-      $derive_spec:ty : $derive_constraint:tt $(,)?
-    $body:expr
-  ) => {
+pub fn with_send_constraint
+  < 'a, X, R >
+  ( cont1: impl SendCont < X, R > )
+  -> R
+where
+  X: HasConstraint < SendConstraint, ContF = SendContF < X > >,
+{
+  let cont2: Box < dyn SendCont < X, R > + '_ > =
+    Box::new ( cont1 );
 
-  }
+  < X as HasConstraint < SendConstraint >
+  > :: with_constraint ( Box::new(cont2) )
 }
+
+// #[macro_export]
+// macro_rules! wrap_send_func {
+//   (
+//     fn $name:ident
+//       < $( $lifetime_param:lifetime $(,)? )* $(,)?
+//         $( $type_param:ident $(,)? )*
+//       >
+//     where
+//       $( $type_spec:ty : $constraint:tt $(,)? )*
+//     deriving ( $constraint_type:ty )
+//       $derive_spec:ty : $derive_constraint:tt $(,)?
+//     $body:expr
+//   ) => {
+
+//   }
+// }

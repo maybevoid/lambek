@@ -49,6 +49,15 @@ pub trait HasTypeApp < 'a, F: 'a + ?Sized, X: 'a + ?Sized >
 
 pub type App < 'a, F, X > = Box < dyn HasTypeApp < 'a, F, X > + 'a >;
 
+pub fn wrap_app < 'a, F: 'a, X: 'a, FX: 'a >
+  ( fx: FX )
+  -> App < 'a, F, X >
+where
+  F: TypeApp < 'a, X, Applied=FX >
+{
+  Box::new ( fx )
+}
+
 impl < 'a, F: 'a, X: 'a, FX: 'a >
   HasTypeApp < 'a, F, X >
   for FX
