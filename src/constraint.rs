@@ -1,6 +1,6 @@
 use crate::bi_type_app::*;
 
-pub trait HasConstraint < X > {
+pub trait HasConstraint < X: ?Sized > {
   fn with_constraint < 'a, R: 'a >
     ( cont: BiApp < 'a, Self, X, R > )
     -> R

@@ -1,12 +1,11 @@
 use std::fmt::Display;
-use std::marker::PhantomData;
 
 use crate::constraint::*;
 use crate::bi_type_app::*;
 
 enum DisplayConstraint {}
 
-trait DisplayCont < X, R > {
+trait DisplayCont < X: ?Sized, R > {
   fn on_display ( self: Box < Self > ) -> R
   where
     X: Display
@@ -72,42 +71,30 @@ where
 
 #[test]
 fn test_display_constraint () {
-  struct UseDisplay < 'a, X > ( PhantomData < &'a X > );
-
-  impl < 'a, X >
-    DisplayCont < X, fn (&'a X) >
-    for UseDisplay < 'a, X >
+  fn use_display < 'a, X: 'a >
+    ( x: &'a X )
+  where
+    DisplayConstraint: HasConstraint < X >,
   {
-    fn on_display ( self: Box < Self > )
-      -> fn (&'a X)
-    where
-      X: Display
-    {
-      Self::use_display_1
+    struct Cont < 'a, X: 'a > {
+      x: &'a X
     }
+
+    impl < 'a, X: 'a >
+      DisplayCont < X, () >
+      for Cont < 'a, X >
+    {
+      fn on_display ( self: Box < Self > )
+      where
+        X: Display
+      {
+        let x = self.x;
+        println!("X: {}", x);
+      }
+    }
+
+    with_display_constraint( Cont { x } )
   }
 
-  impl < 'a, X >
-    UseDisplay < 'a, X >
-  {
-    fn use_display_1 ( x: &'a X )
-    where
-      X: Display,
-    {
-      println!("X: {}", x);
-    }
-
-    fn use_display ( x: &'a X )
-    where
-      DisplayConstraint:
-        HasConstraint <
-          X,
-        >,
-    {
-      with_display_constraint( UseDisplay (PhantomData) )
-      ( x )
-    }
-  }
-
-  UseDisplay::use_display ( &"Hello World".to_string() );
+  use_display ( &"Hello World".to_string() );
 }
