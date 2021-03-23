@@ -1,111 +1,92 @@
-use crate::type_app::*;
-use crate::nat_trans::*;
+use crate::{
+  nat_trans::*,
+  type_app::*,
+};
 
 // Row: RowCon :: (Type -> Type) -> Type
-pub trait RowCon { }
+pub trait RowCon
+{
+}
 
-pub trait RowApp < 'a, F: 'a + ?Sized > : RowCon
+pub trait RowApp<'a, F : 'a + ?Sized>: RowCon
 where
-  F: TypeCon,
+  F : TypeCon,
 {
   type Applied: 'a;
 }
 
-pub trait RowAppGeneric : RowCon + Sized {
-  fn with_row_app < 'a, F: 'a, R: 'a >
-    ( cont: impl RowAppGenericCont < 'a, Self, F, R >
-    ) -> R
-  where
-    Self: 'a,
-    F: TypeAppGeneric,
-  ;
-}
-
-pub trait RowAppGenericCont
-  < 'a, Row: 'a, F: 'a, R: 'a >
+pub trait RowAppGeneric: RowCon + Sized
 {
-  fn on_row_app ( self ) -> R
+  fn with_row_app<'a, F : 'a, R : 'a>(
+    cont : impl RowAppGenericCont<'a, Self, F, R>
+  ) -> R
   where
-    F: TypeCon,
-    Row: RowApp < 'a, F >,
-  ;
+    Self : 'a,
+    F : TypeAppGeneric;
 }
 
-pub trait HasRowApp
-  < 'a, Row: 'a + ?Sized, F: 'a + ?Sized + TypeCon >
+pub trait RowAppGenericCont<'a, Row : 'a, F : 'a, R : 'a>
 {
-  fn get_applied ( self: Box< Self > )
-    -> Box < Row::Applied >
+  fn on_row_app(self) -> R
   where
-    Row: RowApp < 'a, F >
-  ;
-
-  fn get_applied_borrow < 'b >
-    ( &'b self )
-    -> &'b Row::Applied
-  where
-    Row: RowApp < 'a, F >
-  ;
-
-  fn get_applied_borrow_mut < 'b >
-    ( &'b mut self )
-    -> &'b mut Row::Applied
-  where
-    Row: RowApp < 'a, F >
-  ;
+    F : TypeCon,
+    Row : RowApp<'a, F>;
 }
 
-pub type AppRow < 'a, Row, F > =
-  Box < dyn HasRowApp < 'a, Row, F > + 'a >;
+pub trait HasRowApp<'a, Row : 'a + ?Sized, F : 'a + ?Sized + TypeCon>
+{
+  fn get_applied(self: Box<Self>) -> Box<Row::Applied>
+  where
+    Row : RowApp<'a, F>;
 
-pub fn wrap_row < 'a, Row: 'a, F: 'a >
-  ( row: Row::Applied )
-  -> AppRow < 'a, Row, F >
+  fn get_applied_borrow<'b>(&'b self) -> &'b Row::Applied
+  where
+    Row : RowApp<'a, F>;
+
+  fn get_applied_borrow_mut<'b>(&'b mut self) -> &'b mut Row::Applied
+  where
+    Row : RowApp<'a, F>;
+}
+
+pub type AppRow<'a, Row, F> = Box<dyn HasRowApp<'a, Row, F> + 'a>;
+
+pub fn wrap_row<'a, Row : 'a, F : 'a>(row : Row::Applied) -> AppRow<'a, Row, F>
 where
-  F: TypeCon,
-  Row: RowApp < 'a, F >,
+  F : TypeCon,
+  Row : RowApp<'a, F>,
 {
   Box::new(row)
 }
 
-impl < 'a, Row: 'a, F: 'a, RF: 'a >
-  HasRowApp < 'a, Row, F >
-  for RF
+impl<'a, Row : 'a, F : 'a, RF : 'a> HasRowApp<'a, Row, F> for RF
 where
-  F: TypeCon,
-  Row: RowApp < 'a, F, Applied = RF >
+  F : TypeCon,
+  Row : RowApp<'a, F, Applied = RF>,
 {
-  fn get_applied ( self: Box < Self > )
-    -> Box < RF >
+  fn get_applied(self: Box<Self>) -> Box<RF>
   {
     self
   }
 
-  fn get_applied_borrow < 'b >
-    ( &'b self )
-    -> &'b RF
+  fn get_applied_borrow<'b>(&'b self) -> &'b RF
   {
     self
   }
 
-  fn get_applied_borrow_mut < 'b >
-    ( &'b mut self )
-    -> &'b mut RF
+  fn get_applied_borrow_mut<'b>(&'b mut self) -> &'b mut RF
   {
     self
   }
 }
 
-pub trait LiftRow : RowCon {
-  fn lift
-    < 'a, F: 'a, G: 'a >
-    ( trans: impl NaturalTransformation < F, G >,
-      row: AppRow < 'a, Self, F >
-    ) ->
-      AppRow < 'a, Self, G >
+pub trait LiftRow: RowCon
+{
+  fn lift<'a, F : 'a, G : 'a>(
+    trans : impl NaturalTransformation<F, G>,
+    row : AppRow<'a, Self, F>,
+  ) -> AppRow<'a, Self, G>
   where
-    Self: 'a,
-    F: TypeAppGeneric,
-    G: TypeAppGeneric,
-  ;
+    Self : 'a,
+    F : TypeAppGeneric,
+    G : TypeAppGeneric;
 }
