@@ -1,6 +1,7 @@
 use crate::type_app::*;
 use crate::nat_trans::*;
 
+// Row: RowCon :: (Type -> Type) -> Type
 pub trait RowCon { }
 
 pub trait RowApp < 'a, F: 'a + ?Sized > : RowCon

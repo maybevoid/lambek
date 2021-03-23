@@ -1,10 +1,11 @@
-use super::type_app::*;
+use crate::bi_type_app::*;
 
-pub trait HasConstraint < C > : Sized {
-  type ContF;
-
+pub trait HasConstraint < X > {
   fn with_constraint < 'a, R: 'a >
-    ( cont: App < 'a, Self::ContF, R > )
+    ( cont: BiApp < 'a, Self, X, R > )
     -> R
+  where
+    X: 'a,
+    Self: 'a,
   ;
 }

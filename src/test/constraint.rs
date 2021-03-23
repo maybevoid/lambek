@@ -2,47 +2,112 @@ use std::fmt::Display;
 use std::marker::PhantomData;
 
 use crate::constraint::*;
-use crate::send::*;
+use crate::bi_type_app::*;
 
-#[test]
-pub fn test_send_constraint () {
-  struct UseSend < 'a, X > ( PhantomData < &'a X > );
+enum DisplayConstraint {}
 
-  impl < 'a, X >
-    SendCont < X, fn (&'a X) >
-    for UseSend < 'a, X >
+trait DisplayCont < X, R > {
+  fn on_display ( self: Box < Self > ) -> R
   where
     X: Display
+  ;
+}
+
+impl BiTypeCon for DisplayConstraint { }
+
+impl < 'a, X: 'a, R: 'a >
+  BiTypeApp < 'a, X, R >
+  for DisplayConstraint
+{
+  type Applied = Box < dyn DisplayCont < X, R > + 'a >;
+}
+
+impl BiTypeAppGeneric for DisplayConstraint
+{
+  fn with_type_app < 'a, X: 'a, R: 'a, K: 'a >
+    ( cont: impl BiTypeAppGenericCont < 'a, Self, X, R, K > )
+    -> K
+  where
+    Self: 'a
   {
-    fn on_send ( self: Box < Self > )
+    cont.on_type_app()
+  }
+}
+
+impl < X >
+  HasConstraint < X >
+  for DisplayConstraint
+where
+  X: Display
+{
+  fn with_constraint < 'a, R: 'a >
+    ( cont1: BiApp < 'a, Self, X, R > )
+    -> R
+  where
+    X: 'a
+  {
+    let cont2: Box < dyn DisplayCont < X, R > + 'a > =
+      *cont1.get_applied();
+
+    cont2.on_display()
+  }
+}
+
+fn with_display_constraint
+  < 'a, X: 'a, R: 'a >
+  ( cont1: impl DisplayCont < X, R > )
+  -> R
+where
+  DisplayConstraint:
+    HasConstraint <
+      X,
+    >,
+{
+  let cont2: Box < dyn DisplayCont < X, R > + '_ > =
+    Box::new ( cont1 );
+
+  DisplayConstraint::with_constraint
+    ( Box::new ( cont2 ) )
+}
+
+#[test]
+fn test_display_constraint () {
+  struct UseDisplay < 'a, X > ( PhantomData < &'a X > );
+
+  impl < 'a, X >
+    DisplayCont < X, fn (&'a X) >
+    for UseDisplay < 'a, X >
+  {
+    fn on_display ( self: Box < Self > )
       -> fn (&'a X)
     where
-      X: Send
+      X: Display
     {
-      Self::use_send_1
+      Self::use_display_1
     }
   }
 
   impl < 'a, X >
-    UseSend < 'a, X >
-  where
-    X: Display,
+    UseDisplay < 'a, X >
   {
-    fn use_send_1 ( x: &'a X )
+    fn use_display_1 ( x: &'a X )
     where
-      X: Send,
+      X: Display,
     {
       println!("X: {}", x);
     }
 
-    fn use_send ( x: &'a X )
+    fn use_display ( x: &'a X )
     where
-      X: HasConstraint < SendConstraint, ContF = SendContF < X > >,
+      DisplayConstraint:
+        HasConstraint <
+          X,
+        >,
     {
-      with_send_constraint( UseSend (PhantomData) )
+      with_display_constraint( UseDisplay (PhantomData) )
       ( x )
     }
   }
 
-  UseSend::use_send ( &"Hello World".to_string() );
+  UseDisplay::use_display ( &"Hello World".to_string() );
 }

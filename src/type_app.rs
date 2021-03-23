@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 
+// F: TypeCon :: Type -> Type
 pub trait TypeCon { }
 
 pub trait TypeApp < 'a, X: 'a + ?Sized > : TypeCon {
