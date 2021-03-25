@@ -68,12 +68,12 @@ where
     self
   }
 
-  fn get_applied_borrow<'b>(&'b self) -> &'b RF
+  fn get_applied_borrow(&self) -> &RF
   {
     self
   }
 
-  fn get_applied_borrow_mut<'b>(&'b mut self) -> &'b mut RF
+  fn get_applied_borrow_mut(&mut self) -> &mut RF
   {
     self
   }
@@ -82,7 +82,7 @@ where
 pub trait LiftRow: RowCon
 {
   fn lift<'a, F : 'a, G : 'a>(
-    trans : impl NaturalTransformation<F, G>,
+    trans : impl NaturalTransformation<F, G> + Clone,
     row : AppRow<'a, Self, F>,
   ) -> AppRow<'a, Self, G>
   where

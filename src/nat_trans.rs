@@ -5,8 +5,8 @@ where
   F : TypeAppGeneric,
   G : TypeAppGeneric,
 {
-  fn lift<'a, X>(
-    &self,
-    fx : App<'a, F, X>,
-  ) -> App<'a, G, X>;
+  fn lift<X>(
+    self,
+    fx : App<'_, F, X>,
+  ) -> App<'_, G, X>;
 }

@@ -158,7 +158,7 @@ where
   Tail : LiftRow,
 {
   fn lift<'a, F : 'a, G : 'a>(
-    trans : impl NaturalTransformation<F, G>,
+    trans : impl NaturalTransformation<F, G> + Clone,
     row : AppRow<'a, Self, F>,
   ) -> AppRow<'a, Self, G>
   where
@@ -168,7 +168,7 @@ where
   {
     let Cons(fx, tail) = *row.get_applied();
 
-    let gx = trans.lift(fx);
+    let gx = trans.clone().lift(fx);
 
     let tail2 = Tail::lift(trans, tail);
 
@@ -181,7 +181,7 @@ where
   Tail : LiftRow,
 {
   fn lift<'a, F : 'a, G : 'a>(
-    trans : impl NaturalTransformation<F, G>,
+    trans : impl NaturalTransformation<F, G> + Clone,
     row : AppRow<'a, Self, F>,
   ) -> AppRow<'a, Self, G>
   where

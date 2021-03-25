@@ -30,11 +30,11 @@ pub trait HasBiTypeApp<'a, F : 'a + ?Sized, X : 'a + ?Sized, Y : 'a + ?Sized>
   where
     F : BiTypeApp<'a, X, Y>;
 
-  fn get_applied_borrow<'b>(&'b self) -> &'b F::Applied
+  fn get_applied_borrow(&self) -> &F::Applied
   where
     F : BiTypeApp<'a, X, Y>;
 
-  fn get_applied_borrow_mut<'b>(&'b mut self) -> &'b mut F::Applied
+  fn get_applied_borrow_mut(&mut self) -> &mut F::Applied
   where
     F : BiTypeApp<'a, X, Y>;
 }
@@ -59,12 +59,12 @@ where
     self
   }
 
-  fn get_applied_borrow<'b>(&'b self) -> &'b FX
+  fn get_applied_borrow(&self) -> &FX
   {
     self
   }
 
-  fn get_applied_borrow_mut<'b>(&'b mut self) -> &'b mut FX
+  fn get_applied_borrow_mut(&mut self) -> &mut FX
   {
     self
   }
