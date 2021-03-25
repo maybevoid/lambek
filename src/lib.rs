@@ -7,7 +7,6 @@
 //! Learn more about Lambek on the project
 //! [GitHub page](https://github.com/maybevoid/lambek).
 
-/// Traits for the kind of unary type application, `Type -> Type`.
 pub mod type_app;
 
 /// Traits for the kind of binary type application, `Type -> Type -> Type`.
