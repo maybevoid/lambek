@@ -7,4 +7,4 @@ description = "Type-Level Programming in Rust"
 homepage = "https://github.com/maybevoid/lambek"
 repository = "https://github.com/maybevoid/lambek"
 license = "MIT OR Apache-2.0"
-keywords = [ "functional-programming" ]
+keywords = [ "functional" ]
