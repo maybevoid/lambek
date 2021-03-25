@@ -3,5 +3,8 @@ name = "lambek"
 version = "0.1.0"
 authors = ["Soares Chen <soares.chen@maybevoid.com>"]
 edition = "2018"
-
-[dependencies]
+description = "Type-Level Programming in Rust"
+homepage = "https://github.com/maybevoid/lambek"
+repository = "https://github.com/maybevoid/lambek"
+license = "MIT OR Apache-2.0"
+keywords = [ "functional-programming" ]
