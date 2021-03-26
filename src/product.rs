@@ -14,33 +14,33 @@ pub struct Cons<X, Tail>(X, Tail);
 
 impl Product for Top {}
 
-impl<X, Tail> Product for Cons<X, Tail> where Tail : Product {}
+impl<X, Tail> Product for Cons<X, Tail> where Tail: Product {}
 
 impl RowCon for Top {}
 impl<X, Tail> RowCon for Cons<X, Tail> {}
 
-impl<'a, F : 'a> RowApp<'a, F> for Top
+impl<'a, F: 'a> RowApp<'a, F> for Top
 where
-  F : TypeCon,
+  F: TypeCon,
 {
   type Applied = Top;
 }
 
-impl<'a, X : 'a, Tail : 'a, F : 'a> RowApp<'a, F> for Cons<X, Tail>
+impl<'a, X: 'a, Tail: 'a, F: 'a> RowApp<'a, F> for Cons<X, Tail>
 where
-  F : TypeCon,
+  F: TypeCon,
 {
   type Applied = Cons<App<'a, F, X>, AppRow<'a, Tail, F>>;
 }
 
 impl RowAppGeneric for Top
 {
-  fn with_row_app<'a, F : 'a, R : 'a>(
-    cont : impl RowAppGenericCont<'a, Self, F, R>
+  fn with_row_app<'a, F: 'a, R: 'a>(
+    cont: impl RowAppGenericCont<'a, Self, F, R>
   ) -> R
   where
-    Self : 'a,
-    F : TypeAppGeneric,
+    Self: 'a,
+    F: TypeAppGeneric,
   {
     cont.on_row_app()
   }
@@ -48,14 +48,14 @@ impl RowAppGeneric for Top
 
 impl<X, Tail> RowAppGeneric for Cons<X, Tail>
 where
-  Tail : RowAppGeneric,
+  Tail: RowAppGeneric,
 {
-  fn with_row_app<'a, F : 'a, R : 'a>(
-    cont : impl RowAppGenericCont<'a, Self, F, R>
+  fn with_row_app<'a, F: 'a, R: 'a>(
+    cont: impl RowAppGenericCont<'a, Self, F, R>
   ) -> R
   where
-    Self : 'a,
-    F : TypeAppGeneric,
+    Self: 'a,
+    F: TypeAppGeneric,
   {
     cont.on_row_app()
   }
@@ -63,13 +63,13 @@ where
 
 impl LiftRow for Top
 {
-  fn lift<'a, F : 'a, G : 'a>(
-    _ : impl NaturalTransformation<F, G>,
-    _ : AppRow<'a, Self, F>,
+  fn lift<'a, F: 'a, G: 'a>(
+    _: impl NaturalTransformation<F, G>,
+    _: AppRow<'a, Self, F>,
   ) -> AppRow<'a, Self, G>
   where
-    F : TypeAppGeneric,
-    G : TypeAppGeneric,
+    F: TypeAppGeneric,
+    G: TypeAppGeneric,
   {
     wrap_row(Top)
   }
@@ -77,16 +77,16 @@ impl LiftRow for Top
 
 impl<X, Tail> LiftRow for Cons<X, Tail>
 where
-  Tail : LiftRow,
+  Tail: LiftRow,
 {
-  fn lift<'a, F : 'a, G : 'a>(
-    trans : impl NaturalTransformation<F, G> + Clone,
-    row : AppRow<'a, Self, F>,
+  fn lift<'a, F: 'a, G: 'a>(
+    trans: impl NaturalTransformation<F, G> + Clone,
+    row: AppRow<'a, Self, F>,
   ) -> AppRow<'a, Self, G>
   where
-    Self : 'a,
-    F : TypeAppGeneric,
-    G : TypeAppGeneric,
+    Self: 'a,
+    F: TypeAppGeneric,
+    G: TypeAppGeneric,
   {
     let Cons(fx, tail) = *row.get_applied();
 

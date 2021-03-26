@@ -7,6 +7,7 @@
 //! Learn more about Lambek on the project
 //! [GitHub page](https://github.com/maybevoid/lambek).
 
+#[macro_use]
 pub mod type_app;
 
 /// Traits for the kind of binary type application, `Type -> Type -> Type`.
