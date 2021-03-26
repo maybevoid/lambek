@@ -113,11 +113,32 @@ pub trait TypeAppGeneric: TypeCon + Sized
     Cont: TypeAppCont<'a, Self, X, R>;
 }
 
-pub trait TypeAppCont<'a, F: 'a, X: 'a, R: 'a>
+pub trait TypeAppGenericUnsized: TypeCon
+{
+  fn with_type_app<'a, X: 'a + ?Sized, R: 'a, Cont: 'a>(cont: Box<Cont>) -> R
+  where
+    Self: 'a,
+    Cont: TypeAppCont<'a, Self, X, R>;
+}
+
+pub trait TypeAppCont<'a, F: 'a + ?Sized, X: 'a + ?Sized, R: 'a>
 {
   fn on_type_app(self: Box<Self>) -> R
   where
     F: TypeApp<'a, X>;
+}
+
+impl<F> TypeAppGeneric for F
+where
+  F: TypeAppGenericUnsized,
+{
+  fn with_type_app<'a, X: 'a, R: 'a, Cont: 'a>(cont: Box<Cont>) -> R
+  where
+    Self: 'a,
+    Cont: TypeAppCont<'a, Self, X, R>,
+  {
+    TypeAppGenericUnsized::with_type_app(cont)
+  }
 }
 
 /// Encapsulates an applied type into a trait object to prevent
@@ -235,6 +256,9 @@ pub trait HasTypeApp<'a, F: 'a + ?Sized, X: 'a + ?Sized>: 'a
 /// Type alias for a boxed value of [HasTypeApp].
 pub type App<'a, F, X> = Box<dyn HasTypeApp<'a, F, X>>;
 
+/// Wraps a type `FX` into [App] in the presence of the [TypeApp]
+/// constraint, allowing subsequent use of [App] to not depend
+/// on [TypeApp].
 pub fn wrap_app<'a, F: 'a, X: 'a, FX: 'a>(fx: FX) -> App<'a, F, X>
 where
   F: TypeApp<'a, X, Applied = FX>,
@@ -334,6 +358,11 @@ where
 }
 
 /// `App<Identity, X> ~ X`
+///
+/// A type `X` applied to `Identity` always give us back `X` itself.
+///
+/// Unlike in Haskell, the `Applied` result can just be an `X`,
+/// instead of getting wrapped around a newtype.
 pub enum Identity {}
 
 impl TypeCon for Identity {}
@@ -355,6 +384,12 @@ impl TypeAppGeneric for Identity
 }
 
 /// `App<Const<A>, X> ~ A`
+///
+/// A type `X` applied to `Const<A>` simply has the type argument
+/// discarded. So the type application result is always `A`.
+///
+/// Unlike in Haskell, the `Applied` result can just be an `A`,
+/// instead of getting wrapped around a newtype.
 pub struct Const<A: ?Sized>(PhantomData<A>);
 
 impl<A: ?Sized> TypeCon for Const<A> {}
@@ -364,7 +399,30 @@ impl<'a, A: 'a + ?Sized, X: 'a + ?Sized> TypeApp<'a, X> for Const<A>
   type Applied = A;
 }
 
+/// Allows functions to be polymorphic over both mutable and immutable
+/// references.
+///
+/// With HKT, we can turn reference types into type constructors
+/// and define generic functions that work on multiple reference
+/// types. The `IsRef` trait is implemented for both [Borrow]
+/// and [BorrowMut], which after type application becomes
+/// `&X` and `&mut X`, respectively.
+pub trait IsRef: TypeCon
+{
+  fn get_ref<'a, X: 'a>(x: App<'a, Self, X>) -> &'a X;
+}
+
+pub trait IsMutRef: TypeCon
+{
+  fn get_mut_ref<'a, X: 'a>(x: App<'a, Self, X>) -> &'a mut X;
+}
+
 /// `App<'a, Borrow, X> ~ &'a X`
+///
+/// The result of applying `Borrow` to `X` becomes `&X`.
+/// Note that Borrow also implements [TypeApp] on unsized
+/// types. So we can also apply Borrow to `dyn Trait` objects.
+/// i.e. `App<'a, Borrow, dyn Trait> ~ &'a dyn Trait`.
 pub enum Borrow {}
 
 impl TypeCon for Borrow {}
@@ -374,9 +432,9 @@ impl<'a, X: 'a + ?Sized> TypeApp<'a, X> for Borrow
   type Applied = &'a X;
 }
 
-impl TypeAppGeneric for Borrow
+impl TypeAppGenericUnsized for Borrow
 {
-  fn with_type_app<'a, X: 'a, R: 'a, Cont: 'a>(cont: Box<Cont>) -> R
+  fn with_type_app<'a, X: 'a + ?Sized, R: 'a, Cont: 'a>(cont: Box<Cont>) -> R
   where
     Self: 'a,
     Cont: TypeAppCont<'a, Self, X, R>,
@@ -385,7 +443,31 @@ impl TypeAppGeneric for Borrow
   }
 }
 
-/// `App<'a, BorrowMutF, X> ~ &'a mut X`
+impl IsRef for Borrow
+{
+  fn get_ref<'a, X: 'a>(x: App<'a, Self, X>) -> &'a X
+  {
+    *x.get_applied()
+  }
+}
+
+impl IsRef for BorrowMut
+{
+  fn get_ref<'a, X: 'a>(x: App<'a, Self, X>) -> &'a X
+  {
+    *x.get_applied()
+  }
+}
+
+impl IsMutRef for BorrowMut
+{
+  fn get_mut_ref<'a, X: 'a>(x: App<'a, Self, X>) -> &'a mut X
+  {
+    *x.get_applied()
+  }
+}
+
+/// `App<'a, BorrowMut, X> ~ &'a mut X`
 pub enum BorrowMut {}
 
 impl TypeCon for BorrowMut {}
@@ -395,9 +477,9 @@ impl<'a, X: 'a + ?Sized> TypeApp<'a, X> for BorrowMut
   type Applied = &'a mut X;
 }
 
-impl TypeAppGeneric for BorrowMut
+impl TypeAppGenericUnsized for BorrowMut
 {
-  fn with_type_app<'a, X: 'a, R: 'a, Cont: 'a>(cont: Box<Cont>) -> R
+  fn with_type_app<'a, X: 'a + ?Sized, R: 'a, Cont: 'a>(cont: Box<Cont>) -> R
   where
     Self: 'a,
     Cont: TypeAppCont<'a, Self, X, R>,
@@ -408,7 +490,24 @@ impl TypeAppGeneric for BorrowMut
 
 /// `App<BoxF, X> ~ Box<X>`
 pub enum BoxF {}
-impl_type_app!(BoxF, Box);
+
+impl TypeCon for BoxF {}
+
+impl<'a, X: 'a + ?Sized> TypeApp<'a, X> for BoxF
+{
+  type Applied = Box<X>;
+}
+
+impl TypeAppGenericUnsized for BoxF
+{
+  fn with_type_app<'a, X: 'a + ?Sized, R: 'a, Cont: 'a>(cont: Box<Cont>) -> R
+  where
+    Self: 'a,
+    Cont: TypeAppCont<'a, Self, X, R>,
+  {
+    cont.on_type_app()
+  }
+}
 
 /// `App<VecF, X> ~ Vec<X>`
 pub enum VecF {}

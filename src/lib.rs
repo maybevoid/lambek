@@ -7,6 +7,7 @@
 //! Learn more about Lambek on the project
 //! [GitHub page](https://github.com/maybevoid/lambek).
 
+#[warn(clippy::all)]
 #[macro_use]
 pub mod type_app;
 
