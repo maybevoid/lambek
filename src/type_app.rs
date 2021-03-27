@@ -357,6 +357,20 @@ where
   }
 }
 
+pub struct ComposeF<F: ?Sized, G: ?Sized>(PhantomData<F>, PhantomData<G>);
+
+pub struct Compose<'a, F: 'a + ?Sized, G: 'a + ?Sized, X: 'a + ?Sized>(
+  pub App<'a, F, App<'a, G, X>>,
+);
+
+impl<F: ?Sized, G: ?Sized> TypeCon for ComposeF<F, G> {}
+
+impl<'a, F: 'a + ?Sized, G: 'a + ?Sized, X: 'a + ?Sized> TypeApp<'a, X>
+  for ComposeF<F, G>
+{
+  type Applied = Compose<'a, F, G, X>;
+}
+
 /// `App<Identity, X> ~ X`
 ///
 /// A type `X` applied to `Identity` always give us back `X` itself.

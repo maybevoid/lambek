@@ -7,7 +7,6 @@
 //! Learn more about Lambek on the project
 //! [GitHub page](https://github.com/maybevoid/lambek).
 
-#[warn(clippy::all)]
 #[macro_use]
 pub mod type_app;
 
@@ -28,6 +27,8 @@ pub mod sum;
 
 /// Extensible Products
 pub mod product;
+
+pub mod nat;
 
 /// Natural Transformation, `type f ~> g = forall x. f x -> g x`
 pub mod nat_trans;
