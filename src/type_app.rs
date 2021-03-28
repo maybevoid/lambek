@@ -183,7 +183,7 @@ where
 /// We wrap an `Applied` type into a
 /// `Box<dyn HasTypeApp<'a, F, X>>` to discharge the
 /// `TypeApp` constraint. When we need the concrete type
-/// again, we then call [get_applied](HasTypeApp::get_applied)
+/// again, we then call [get_applied_box](HasTypeApp::get_applied_box)
 /// which again requires the `TypeApp` trait bound to be present.
 ///
 /// Using `HasTypeApp`, the trait `Functor` can instead be
@@ -217,7 +217,7 @@ pub trait HasTypeApp<'a, F: 'a + ?Sized, X: 'a + ?Sized>: 'a
   /// Get an applied type `FX` out of a
   /// `Box<dyn HasTypeApp<'a, F, X>>` with the trait bound
   /// `F: TypeApp<'a, X>` present.
-  fn get_applied(self: Box<Self>) -> Box<F::Applied>
+  fn get_applied_box(self: Box<Self>) -> Box<F::Applied>
   where
     F: TypeApp<'a, X>;
 
@@ -269,7 +269,7 @@ where
   where
     F: TypeApp<'a, X, Applied = FX>,
   {
-    fn get_applied(self: Box<Self>) -> Box<FX>
+    fn get_applied_box(self: Box<Self>) -> Box<FX>
     {
       Box::new(self.0)
     }
@@ -294,6 +294,26 @@ where
   }
 
   Box::new(Applied(fx))
+}
+
+pub trait HasTypeAppSized<'a, F: 'a, X: 'a>: 'a
+{
+  fn get_applied(self) -> F::Applied
+  where
+    F: TypeApp<'a, X>,
+    F::Applied: Sized;
+}
+
+impl<'a, F: 'a, X: 'a> HasTypeAppSized<'a, F, X>
+  for Box<dyn HasTypeApp<'a, F, X>>
+{
+  fn get_applied(self) -> F::Applied
+  where
+    F: TypeApp<'a, X>,
+    F::Applied: Sized,
+  {
+    *self.get_applied_box()
+  }
 }
 
 #[macro_export]
@@ -361,16 +381,12 @@ macro_rules! impl_type_app {
 
 pub struct ComposeF<F: ?Sized, G: ?Sized>(PhantomData<F>, PhantomData<G>);
 
-pub struct Compose<'a, F: 'a + ?Sized, G: 'a + ?Sized, X: 'a + ?Sized>(
-  pub App<'a, F, App<'a, G, X>>,
-);
-
 impl<F: ?Sized, G: ?Sized> TypeCon for ComposeF<F, G> {}
 
 impl<'a, F: 'a + ?Sized, G: 'a + ?Sized, X: 'a + ?Sized> TypeApp<'a, X>
   for ComposeF<F, G>
 {
-  type Applied = Compose<'a, F, G, X>;
+  type Applied = App<'a, F, App<'a, G, X>>;
 }
 
 /// `App<Identity, X> ~ X`
@@ -463,7 +479,7 @@ impl IsRef for Borrow
 {
   fn get_ref<'a, X: 'a>(x: App<'a, Self, X>) -> &'a X
   {
-    *x.get_applied()
+    *x.get_applied_box()
   }
 }
 
@@ -471,7 +487,7 @@ impl IsRef for BorrowMut
 {
   fn get_ref<'a, X: 'a>(x: App<'a, Self, X>) -> &'a X
   {
-    *x.get_applied()
+    *x.get_applied_box()
   }
 }
 
@@ -479,7 +495,7 @@ impl IsMutRef for BorrowMut
 {
   fn get_mut_ref<'a, X: 'a>(x: App<'a, Self, X>) -> &'a mut X
   {
-    *x.get_applied()
+    *x.get_applied_box()
   }
 }
 

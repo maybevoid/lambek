@@ -33,5 +33,7 @@ pub mod nat;
 /// Natural Transformation, `type f ~> g = forall x. f x -> g x`
 pub mod nat_trans;
 
+pub mod function;
+
 #[cfg(test)]
 pub mod test;

@@ -1,3 +1,7 @@
+use std::marker::PhantomData;
+
+use crate::type_app::*;
+
 // F: BiTypeCon :: Type -> Type -> Type
 pub trait BiTypeCon
 {
@@ -27,7 +31,7 @@ pub trait BiTypeAppGenericCont<'a, F: 'a, X: 'a, Y: 'a, R: 'a>
 
 pub trait HasBiTypeApp<'a, F: 'a + ?Sized, X: 'a + ?Sized, Y: 'a + ?Sized>
 {
-  fn get_applied(self: Box<Self>) -> Box<F::Applied>
+  fn get_applied_box(self: Box<Self>) -> Box<F::Applied>
   where
     F: BiTypeApp<'a, X, Y>;
 
@@ -60,7 +64,7 @@ where
   where
     F: BiTypeApp<'a, X, Y, Applied = FX>,
   {
-    fn get_applied(self: Box<Self>) -> Box<FX>
+    fn get_applied_box(self: Box<Self>) -> Box<FX>
     {
       Box::new(self.0)
     }
@@ -79,202 +83,18 @@ where
   Box::new(Applied(fx))
 }
 
-pub trait IsFn: IsFnMut
-{
-  fn get_fn<'a, A: 'a, B: 'a>(
-    f: BiApp<'a, Self, A, B>
-  ) -> Box<dyn Fn(A) -> B + 'a>;
-}
+/// Partial application of a binary type constructor
+/// `F: Type -> Type -> Type` to one type argument `A`,
+/// making it a regular type constructor
+/// `Partial<F, A>: Type -> Type`.
+pub struct Partial<F: ?Sized, A: ?Sized>(PhantomData<F>, PhantomData<A>);
 
-pub trait IsFnMut: IsFnOnce
-{
-  fn get_fn_mut<'a, A: 'a, B: 'a>(
-    f: BiApp<'a, Self, A, B>
-  ) -> Box<dyn FnMut(A) -> B + 'a>;
-}
+impl<F: ?Sized, A: ?Sized> TypeCon for Partial<F, A> where F: BiTypeCon {}
 
-pub trait IsFnOnce: BiTypeCon
-{
-  fn get_fn_once<'a, A: 'a, B: 'a>(
-    f: BiApp<'a, Self, A, B>
-  ) -> Box<dyn FnOnce(A) -> B + 'a>;
-}
-
-pub enum Function {}
-pub enum FunctionMut {}
-pub enum FunctionOnce {}
-
-impl BiTypeCon for Function {}
-
-impl<'a, A: 'a, B: 'a> BiTypeApp<'a, A, B> for Function
-{
-  type Applied = dyn FnClone<'a, A, B>;
-}
-
-impl BiTypeCon for FunctionMut {}
-
-impl<'a, A: 'a, B: 'a> BiTypeApp<'a, A, B> for FunctionMut
-{
-  type Applied = Box<dyn FnMut(A) -> B + 'a>;
-}
-
-impl BiTypeCon for FunctionOnce {}
-
-impl<'a, A: 'a, B: 'a> BiTypeApp<'a, A, B> for FunctionOnce
-{
-  type Applied = dyn FnOnce(A) -> B + 'a;
-}
-
-pub trait FnClone<'a, A: 'a, B: 'a>: Fn(A) -> B + 'a
-{
-  fn clone_fn(&self) -> Box<dyn FnClone<'a, A, B>>;
-
-  fn wrap_fn(self: Box<Self>) -> BiApp<'a, Function, A, B>;
-}
-
-impl<'a, A: 'a, B: 'a, F: 'a> FnClone<'a, A, B> for F
+impl<'a, F: 'a + ?Sized, A: 'a + ?Sized, B: 'a + ?Sized> TypeApp<'a, B>
+  for Partial<F, A>
 where
-  F: Fn(A) -> B,
-  F: Clone,
+  F: BiTypeApp<'a, A, B>,
 {
-  fn clone_fn(&self) -> Box<dyn FnClone<'a, A, B>>
-  {
-    Box::new(self.clone())
-  }
-
-  fn wrap_fn(self: Box<Self>) -> BiApp<'a, Function, A, B>
-  {
-    wrap_function(*self)
-  }
-}
-
-impl<'a, A: 'a, B: 'a> Clone for Box<dyn FnClone<'a, A, B>>
-{
-  fn clone(&self) -> Self
-  {
-    self.clone_fn()
-  }
-}
-
-impl IsFn for Function
-{
-  fn get_fn<'a, A: 'a, B: 'a>(
-    f: BiApp<'a, Self, A, B>
-  ) -> Box<dyn Fn(A) -> B + 'a>
-  {
-    Box::new(f.get_applied())
-  }
-}
-
-impl IsFnMut for Function
-{
-  fn get_fn_mut<'a, A: 'a, B: 'a>(
-    f: BiApp<'a, Self, A, B>
-  ) -> Box<dyn FnMut(A) -> B + 'a>
-  {
-    Box::new(f.get_applied())
-  }
-}
-
-impl IsFnOnce for Function
-{
-  fn get_fn_once<'a, A: 'a, B: 'a>(
-    f: BiApp<'a, Self, A, B>
-  ) -> Box<dyn FnOnce(A) -> B + 'a>
-  {
-    Box::new(f.get_applied())
-  }
-}
-
-impl IsFnMut for FunctionMut
-{
-  fn get_fn_mut<'a, A: 'a, B: 'a>(
-    f: BiApp<'a, Self, A, B>
-  ) -> Box<dyn FnMut(A) -> B + 'a>
-  {
-    f.get_applied()
-  }
-}
-
-impl IsFnOnce for FunctionMut
-{
-  fn get_fn_once<'a, A: 'a, B: 'a>(
-    f: BiApp<'a, Self, A, B>
-  ) -> Box<dyn FnOnce(A) -> B + 'a>
-  {
-    f.get_applied()
-  }
-}
-
-impl IsFnOnce for FunctionOnce
-{
-  fn get_fn_once<'a, A: 'a, B: 'a>(
-    f: BiApp<'a, Self, A, B>
-  ) -> Box<dyn FnOnce(A) -> B + 'a>
-  {
-    f.get_applied()
-  }
-}
-
-pub fn wrap_function<'a, F: 'a, A: 'a, B: 'a>(f: F) -> BiApp<'a, Function, A, B>
-where
-  F: FnClone<'a, A, B>,
-{
-  struct Applied<F>(F);
-
-  impl<'a, F: 'a, A: 'a, B: 'a> HasBiTypeApp<'a, Function, A, B> for Applied<F>
-  where
-    F: FnClone<'a, A, B>,
-    Function: BiTypeApp<'a, A, B, Applied = dyn FnClone<'a, A, B>>,
-  {
-    fn get_applied(self: Box<Self>) -> Box<dyn FnClone<'a, A, B>>
-    {
-      Box::new(self.0)
-    }
-
-    fn get_applied_borrow(&self) -> &dyn FnClone<'a, A, B>
-    {
-      &self.0
-    }
-
-    fn get_applied_borrow_mut(&mut self) -> &mut dyn FnClone<'a, A, B>
-    {
-      &mut self.0
-    }
-  }
-
-  Box::new(Applied(f))
-}
-
-pub fn wrap_function_once<'a, F: 'a, A: 'a, B: 'a>(
-  f: F
-) -> BiApp<'a, FunctionOnce, A, B>
-where
-  F: FnOnce(A) -> B,
-{
-  struct Applied<F>(F);
-
-  impl<'a, F: 'a, A: 'a, B: 'a> HasBiTypeApp<'a, FunctionOnce, A, B>
-    for Applied<F>
-  where
-    F: FnOnce(A) -> B,
-    FunctionOnce: BiTypeApp<'a, A, B, Applied = dyn FnOnce(A) -> B + 'a>,
-  {
-    fn get_applied(self: Box<Self>) -> Box<dyn FnOnce(A) -> B + 'a>
-    {
-      Box::new(self.0)
-    }
-
-    fn get_applied_borrow(&self) -> &(dyn FnOnce(A) -> B + 'a)
-    {
-      &self.0
-    }
-
-    fn get_applied_borrow_mut(&mut self) -> &mut (dyn FnOnce(A) -> B + 'a)
-    {
-      &mut self.0
-    }
-  }
-
-  Box::new(Applied(f))
+  type Applied = F::Applied;
 }

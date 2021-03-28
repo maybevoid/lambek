@@ -29,7 +29,7 @@ where
     DisplayConstraint:
       BiTypeApp<'a, X, R, Applied = dyn DisplayCont<X, R> + 'a>,
   {
-    fn get_applied(self: Box<Self>) -> Box<dyn DisplayCont<X, R> + 'a>
+    fn get_applied_box(self: Box<Self>) -> Box<dyn DisplayCont<X, R> + 'a>
     {
       Box::new(self.0)
     }
@@ -75,7 +75,7 @@ where
   where
     X: 'a,
   {
-    let cont2: Box<dyn DisplayCont<X, R> + 'a> = cont1.get_applied();
+    let cont2: Box<dyn DisplayCont<X, R> + 'a> = cont1.get_applied_box();
 
     cont2.on_display()
   }
