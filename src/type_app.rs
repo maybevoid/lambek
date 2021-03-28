@@ -263,7 +263,37 @@ pub fn wrap_app<'a, F: 'a, X: 'a, FX: 'a>(fx: FX) -> App<'a, F, X>
 where
   F: TypeApp<'a, X, Applied = FX>,
 {
-  Box::new(fx)
+  struct Applied<X>(X);
+
+  impl<'a, F: 'a, X: 'a, FX: 'a> HasTypeApp<'a, F, X> for Applied<FX>
+  where
+    F: TypeApp<'a, X, Applied = FX>,
+  {
+    fn get_applied(self: Box<Self>) -> Box<FX>
+    {
+      Box::new(self.0)
+    }
+
+    fn get_applied_borrow(&self) -> &FX
+    {
+      &self.0
+    }
+
+    fn get_applied_borrow_mut(&mut self) -> &mut FX
+    {
+      &mut self.0
+    }
+
+    fn with_type_app(
+      &self,
+      cont: Box<dyn TypeAppCont<'a, F, X, Box<dyn Any>>>,
+    ) -> Box<dyn Any>
+    {
+      cont.on_type_app()
+    }
+  }
+
+  Box::new(Applied(fx))
 }
 
 #[macro_export]
@@ -326,34 +356,6 @@ macro_rules! impl_type_app {
         cont.on_type_app()
       }
     }
-  }
-}
-
-impl<'a, F: 'a, X: 'a, FX: 'a> HasTypeApp<'a, F, X> for FX
-where
-  F: TypeApp<'a, X, Applied = FX>,
-{
-  fn get_applied(self: Box<Self>) -> Box<FX>
-  {
-    self
-  }
-
-  fn get_applied_borrow(&self) -> &FX
-  {
-    self
-  }
-
-  fn get_applied_borrow_mut(&mut self) -> &mut FX
-  {
-    self
-  }
-
-  fn with_type_app(
-    &self,
-    cont: Box<dyn TypeAppCont<'a, F, X, Box<dyn Any>>>,
-  ) -> Box<dyn Any>
-  {
-    cont.on_type_app()
   }
 }
 

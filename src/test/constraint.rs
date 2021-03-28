@@ -14,11 +14,45 @@ trait DisplayCont<X: ?Sized, R>
     X: Display;
 }
 
+fn wrap_display_cont<'a, Cont: 'a, X: 'a + ?Sized, R: 'a>(
+  cont: Cont
+) -> BiApp<'a, DisplayConstraint, X, R>
+where
+  Cont: DisplayCont<X, R>,
+{
+  struct Applied<Cont>(Cont);
+
+  impl<'a, Cont: 'a, X: 'a + ?Sized, R: 'a>
+    HasBiTypeApp<'a, DisplayConstraint, X, R> for Applied<Cont>
+  where
+    Cont: DisplayCont<X, R>,
+    DisplayConstraint:
+      BiTypeApp<'a, X, R, Applied = dyn DisplayCont<X, R> + 'a>,
+  {
+    fn get_applied(self: Box<Self>) -> Box<dyn DisplayCont<X, R> + 'a>
+    {
+      Box::new(self.0)
+    }
+
+    fn get_applied_borrow(&self) -> &(dyn DisplayCont<X, R> + 'a)
+    {
+      &self.0
+    }
+
+    fn get_applied_borrow_mut(&mut self) -> &mut (dyn DisplayCont<X, R> + 'a)
+    {
+      &mut self.0
+    }
+  }
+
+  Box::new(Applied(cont))
+}
+
 impl BiTypeCon for DisplayConstraint {}
 
-impl<'a, X: 'a, R: 'a> BiTypeApp<'a, X, R> for DisplayConstraint
+impl<'a, X: 'a + ?Sized, R: 'a> BiTypeApp<'a, X, R> for DisplayConstraint
 {
-  type Applied = Box<dyn DisplayCont<X, R> + 'a>;
+  type Applied = dyn DisplayCont<X, R> + 'a;
 }
 
 impl BiTypeAppGeneric for DisplayConstraint
@@ -41,7 +75,7 @@ where
   where
     X: 'a,
   {
-    let cont2: Box<dyn DisplayCont<X, R> + 'a> = *cont1.get_applied();
+    let cont2: Box<dyn DisplayCont<X, R> + 'a> = cont1.get_applied();
 
     cont2.on_display()
   }
@@ -51,9 +85,7 @@ fn with_display_constraint<'a, X: 'a, R: 'a>(cont1: impl DisplayCont<X, R>) -> R
 where
   DisplayConstraint: HasConstraint<X>,
 {
-  let cont2: Box<dyn DisplayCont<X, R> + '_> = Box::new(cont1);
-
-  DisplayConstraint::with_constraint(Box::new(cont2))
+  DisplayConstraint::with_constraint(wrap_display_cont(cont1))
 }
 
 #[test]

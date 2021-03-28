@@ -47,32 +47,36 @@ pub trait ToBiTypeApp<'a, F: 'a + ?Sized, X: 'a + ?Sized, Y: 'a + ?Sized>
   fn to_applied(self: Box<Self>) -> BiApp<'a, F, X, Y>;
 }
 
-pub fn wrap_app<'a, F: 'a, X: 'a, Y: 'a, FX: 'a>(fx: FX) -> BiApp<'a, F, X, Y>
+pub fn wrap_bi_app<'a, F: 'a, X: 'a, Y: 'a, FX: 'a>(
+  fx: FX
+) -> BiApp<'a, F, X, Y>
 where
   F: BiTypeApp<'a, X, Y, Applied = FX>,
 {
-  Box::new(fx)
-}
+  struct Applied<FX>(FX);
 
-impl<'a, F: 'a + ?Sized, X: 'a + ?Sized, Y: 'a + ?Sized, FX: 'a + ?Sized>
-  HasBiTypeApp<'a, F, X, Y> for FX
-where
-  F: BiTypeApp<'a, X, Y, Applied = FX>,
-{
-  fn get_applied(self: Box<Self>) -> Box<FX>
+  impl<'a, F: 'a + ?Sized, X: 'a + ?Sized, Y: 'a + ?Sized, FX: 'a>
+    HasBiTypeApp<'a, F, X, Y> for Applied<FX>
+  where
+    F: BiTypeApp<'a, X, Y, Applied = FX>,
   {
-    self
+    fn get_applied(self: Box<Self>) -> Box<FX>
+    {
+      Box::new(self.0)
+    }
+
+    fn get_applied_borrow(&self) -> &FX
+    {
+      &self.0
+    }
+
+    fn get_applied_borrow_mut(&mut self) -> &mut FX
+    {
+      &mut self.0
+    }
   }
 
-  fn get_applied_borrow(&self) -> &FX
-  {
-    self
-  }
-
-  fn get_applied_borrow_mut(&mut self) -> &mut FX
-  {
-    self
-  }
+  Box::new(Applied(fx))
 }
 
 pub trait IsFn: IsFnMut
@@ -104,7 +108,7 @@ impl BiTypeCon for Function {}
 
 impl<'a, A: 'a, B: 'a> BiTypeApp<'a, A, B> for Function
 {
-  type Applied = Box<dyn FnClone<'a, A, B>>;
+  type Applied = dyn FnClone<'a, A, B>;
 }
 
 impl BiTypeCon for FunctionMut {}
@@ -118,12 +122,14 @@ impl BiTypeCon for FunctionOnce {}
 
 impl<'a, A: 'a, B: 'a> BiTypeApp<'a, A, B> for FunctionOnce
 {
-  type Applied = Box<dyn FnOnce(A) -> B + 'a>;
+  type Applied = dyn FnOnce(A) -> B + 'a;
 }
 
 pub trait FnClone<'a, A: 'a, B: 'a>: Fn(A) -> B + 'a
 {
   fn clone_fn(&self) -> Box<dyn FnClone<'a, A, B>>;
+
+  fn wrap_fn(self: Box<Self>) -> BiApp<'a, Function, A, B>;
 }
 
 impl<'a, A: 'a, B: 'a, F: 'a> FnClone<'a, A, B> for F
@@ -134,6 +140,11 @@ where
   fn clone_fn(&self) -> Box<dyn FnClone<'a, A, B>>
   {
     Box::new(self.clone())
+  }
+
+  fn wrap_fn(self: Box<Self>) -> BiApp<'a, Function, A, B>
+  {
+    wrap_function(*self)
   }
 }
 
@@ -151,7 +162,7 @@ impl IsFn for Function
     f: BiApp<'a, Self, A, B>
   ) -> Box<dyn Fn(A) -> B + 'a>
   {
-    f.get_applied()
+    Box::new(f.get_applied())
   }
 }
 
@@ -161,7 +172,7 @@ impl IsFnMut for Function
     f: BiApp<'a, Self, A, B>
   ) -> Box<dyn FnMut(A) -> B + 'a>
   {
-    f.get_applied()
+    Box::new(f.get_applied())
   }
 }
 
@@ -171,7 +182,7 @@ impl IsFnOnce for Function
     f: BiApp<'a, Self, A, B>
   ) -> Box<dyn FnOnce(A) -> B + 'a>
   {
-    f.get_applied()
+    Box::new(f.get_applied())
   }
 }
 
@@ -203,4 +214,67 @@ impl IsFnOnce for FunctionOnce
   {
     f.get_applied()
   }
+}
+
+pub fn wrap_function<'a, F: 'a, A: 'a, B: 'a>(f: F) -> BiApp<'a, Function, A, B>
+where
+  F: FnClone<'a, A, B>,
+{
+  struct Applied<F>(F);
+
+  impl<'a, F: 'a, A: 'a, B: 'a> HasBiTypeApp<'a, Function, A, B> for Applied<F>
+  where
+    F: FnClone<'a, A, B>,
+    Function: BiTypeApp<'a, A, B, Applied = dyn FnClone<'a, A, B>>,
+  {
+    fn get_applied(self: Box<Self>) -> Box<dyn FnClone<'a, A, B>>
+    {
+      Box::new(self.0)
+    }
+
+    fn get_applied_borrow(&self) -> &dyn FnClone<'a, A, B>
+    {
+      &self.0
+    }
+
+    fn get_applied_borrow_mut(&mut self) -> &mut dyn FnClone<'a, A, B>
+    {
+      &mut self.0
+    }
+  }
+
+  Box::new(Applied(f))
+}
+
+pub fn wrap_function_once<'a, F: 'a, A: 'a, B: 'a>(
+  f: F
+) -> BiApp<'a, FunctionOnce, A, B>
+where
+  F: FnOnce(A) -> B,
+{
+  struct Applied<F>(F);
+
+  impl<'a, F: 'a, A: 'a, B: 'a> HasBiTypeApp<'a, FunctionOnce, A, B>
+    for Applied<F>
+  where
+    F: FnOnce(A) -> B,
+    FunctionOnce: BiTypeApp<'a, A, B, Applied = dyn FnOnce(A) -> B + 'a>,
+  {
+    fn get_applied(self: Box<Self>) -> Box<dyn FnOnce(A) -> B + 'a>
+    {
+      Box::new(self.0)
+    }
+
+    fn get_applied_borrow(&self) -> &(dyn FnOnce(A) -> B + 'a)
+    {
+      &self.0
+    }
+
+    fn get_applied_borrow_mut(&mut self) -> &mut (dyn FnOnce(A) -> B + 'a)
+    {
+      &mut self.0
+    }
+  }
+
+  Box::new(Applied(f))
 }

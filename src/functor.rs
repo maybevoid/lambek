@@ -51,10 +51,9 @@ where
     let Compose(xs2) = *xs1.get_applied();
 
     #[allow(clippy::type_complexity)]
-    let g: Box<dyn FnOnce(App<'a, G, A>) -> App<'a, G, B> + 'a> =
-      Box::new(move |ga| G::fmap(ga, f1));
+    let g = wrap_function_once(move |ga| G::fmap(ga, f1));
 
-    Box::new(Compose(F::fmap(xs2, Box::new(g))))
+    wrap_app(Compose(F::fmap(xs2, g)))
   }
 }
 
@@ -73,11 +72,10 @@ where
     G: 'a,
   {
     let Compose(xs2) = *xs1.get_applied();
-    let f2 = *f1.get_applied();
+    let f2 = f1.get_applied();
 
-    let g: Box<dyn FnClone<'a, App<'a, G, A>, App<'a, G, B>>> =
-      Box::new(move |ga| G::fmap(ga, Box::new(f2.clone_fn())));
+    let g = wrap_function(move |ga| G::fmap(ga, f2.clone().wrap_fn()));
 
-    Box::new(Compose(F::fmap(xs2, Box::new(g))))
+    wrap_app(Compose(F::fmap(xs2, g)))
   }
 }
