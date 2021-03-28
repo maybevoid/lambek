@@ -379,12 +379,37 @@ macro_rules! impl_type_app {
   }
 }
 
-pub struct ComposeF<F: ?Sized, G: ?Sized>(PhantomData<F>, PhantomData<G>);
+pub struct Compose<F: ?Sized, G: ?Sized>(PhantomData<F>, PhantomData<G>);
 
-impl<F: ?Sized, G: ?Sized> TypeCon for ComposeF<F, G> {}
+// pub trait HasCompose <'a, F: 'a, G: 'a, X: 'a >
+// {
+//   fn get_compose(self: Box<Self>) -> F::Applied
+//   where
+//     G: TypeApp<'a, X>,
+//     F: TypeApp<'a, G::Applied>
+//   ;
+
+//   fn get_compose_wrapped(self: Box<Self>) ->
+//     App<'a, F, App<'a, G, X>>
+//   ;
+// }
+
+// fn wrap_compose <'a, F: 'a, G: 'a, X: 'a, FGX: 'a, GX: 'a >
+//   (fgx: FGX)
+//   -> Box< dyn HasCompose<'a, F, G, X> + 'a >
+// where
+//   G: TypeApp<'a, X, Applied = GX>,
+//   F: TypeApp<'a, GX, Applied = FGX>,
+// {
+//   struct Composed<X>(X);
+
+//   todo!()
+// }
+
+impl<F: ?Sized, G: ?Sized> TypeCon for Compose<F, G> {}
 
 impl<'a, F: 'a + ?Sized, G: 'a + ?Sized, X: 'a + ?Sized> TypeApp<'a, X>
-  for ComposeF<F, G>
+  for Compose<F, G>
 {
   type Applied = App<'a, F, App<'a, G, X>>;
 }
@@ -551,4 +576,10 @@ impl_type_app!(OptionF, Option);
 
 /// `App<ResultF<E>, X> ~ Result<E, X>`
 pub struct ResultF<E>(PhantomData<E>);
-impl_type_app!(ResultF<E>, Result);
+
+impl<E> TypeCon for ResultF<E> {}
+
+impl<'a, E: 'a, X: 'a> TypeApp<'a, X> for ResultF<E>
+{
+  type Applied = Result<X, E>;
+}
