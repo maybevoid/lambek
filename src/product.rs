@@ -61,13 +61,16 @@ where
   }
 }
 
-impl LiftRow for Top
+impl<Ref> LiftRow<Ref> for Top
 {
-  fn lift<'a, F: 'a, G: 'a>(
-    _: impl NaturalTransformation<F, G>,
+  fn lift<'a, 'b, F: 'a, G: 'a, Trans>(
+    _: App<'b, Ref, Trans>,
     _: AppRow<'a, Self, F>,
   ) -> AppRow<'a, Self, G>
   where
+    'a: 'b,
+    Self: 'a,
+    Trans: NaturalTransformation<Ref, F, G>,
     F: TypeAppGeneric,
     G: TypeAppGeneric,
   {
@@ -75,22 +78,26 @@ impl LiftRow for Top
   }
 }
 
-impl<X, Tail> LiftRow for Cons<X, Tail>
+impl<Ref, X, Tail> LiftRow<Ref> for Cons<X, Tail>
 where
-  Tail: LiftRow,
+  Ref: CloneApp,
+  Tail: LiftRow<Ref>,
 {
-  fn lift<'a, F: 'a, G: 'a>(
-    trans: impl NaturalTransformation<F, G> + Clone,
+  fn lift<'a, 'b, F: 'a, G: 'a, Trans>(
+    trans: App<'b, Ref, Trans>,
     row: AppRow<'a, Self, F>,
   ) -> AppRow<'a, Self, G>
   where
+    'a: 'b,
     Self: 'a,
+    Trans: NaturalTransformation<Ref, F, G> + Clone,
     F: TypeAppGeneric,
     G: TypeAppGeneric,
   {
     let Cons(fx, tail) = *row.get_applied();
+    let trans2 = Ref::clone_app(&trans);
 
-    let gx = trans.clone().lift(fx);
+    let gx = Trans::lift(trans2, fx);
 
     let tail2 = Tail::lift(trans, tail);
 

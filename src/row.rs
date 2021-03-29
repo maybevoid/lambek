@@ -79,14 +79,16 @@ where
   }
 }
 
-pub trait LiftRow: RowCon
+pub trait LiftRow<Ref>: RowCon
 {
-  fn lift<'a, F: 'a, G: 'a>(
-    trans: impl NaturalTransformation<F, G> + Clone,
+  fn lift<'a, 'b, F: 'a, G: 'a, Trans>(
+    trans: App<'b, Ref, Trans>,
     row: AppRow<'a, Self, F>,
   ) -> AppRow<'a, Self, G>
   where
+    'a: 'b,
     Self: 'a,
+    Trans: NaturalTransformation<Ref, F, G> + Clone,
     F: TypeAppGeneric,
     G: TypeAppGeneric;
 }

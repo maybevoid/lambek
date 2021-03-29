@@ -70,13 +70,16 @@ where
   }
 }
 
-impl LiftRow for Bottom
+impl<Ref> LiftRow<Ref> for Bottom
 {
-  fn lift<'a, F: 'a, G: 'a>(
-    _: impl NaturalTransformation<F, G>,
+  fn lift<'a, 'b, F: 'a, G: 'a, Trans>(
+    _: App<'b, Ref, Trans>,
     row: AppRow<'a, Self, F>,
   ) -> AppRow<'a, Self, G>
   where
+    'a: 'b,
+    Self: 'a,
+    Trans: NaturalTransformation<Ref, F, G>,
     F: TypeAppGeneric,
     G: TypeAppGeneric,
   {
@@ -84,21 +87,23 @@ impl LiftRow for Bottom
   }
 }
 
-impl<X, Tail> LiftRow for Union<X, Tail>
+impl<Ref, X, Tail> LiftRow<Ref> for Union<X, Tail>
 where
-  Tail: LiftRow,
+  Tail: LiftRow<Ref>,
 {
-  fn lift<'a, F: 'a, G: 'a>(
-    trans: impl NaturalTransformation<F, G> + Clone,
+  fn lift<'a, 'b, F: 'a, G: 'a, Trans>(
+    trans: App<'b, Ref, Trans>,
     row: AppRow<'a, Self, F>,
   ) -> AppRow<'a, Self, G>
   where
+    'a: 'b,
     Self: 'a,
+    Trans: NaturalTransformation<Ref, F, G> + Clone,
     F: TypeAppGeneric,
     G: TypeAppGeneric,
   {
     match *row.get_applied() {
-      Inl(fx) => wrap_row(Inl(trans.lift(fx))),
+      Inl(fx) => wrap_row(Inl(Trans::lift(trans, fx))),
       Inr(tail) => wrap_row(Inr(Tail::lift(trans, tail))),
     }
   }

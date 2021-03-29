@@ -35,5 +35,7 @@ pub mod nat_trans;
 
 pub mod function;
 
+pub mod reference;
+
 #[cfg(test)]
 pub mod test;
