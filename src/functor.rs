@@ -4,24 +4,24 @@ use crate::{
   type_app::*,
 };
 
-pub trait Functor<Fn>: TypeCon
+pub trait Functor<Func>: TypeCon
 {
   /// `fmap :: forall a b . f a -> (a -> b) -> f b`
   fn fmap<'a, 'b, A: 'a, B: 'a>(
     fa: App<'a, Self, A>,
-    mapper: BiApp<'b, Fn, A, B>,
+    mapper: BiApp<'b, Func, A, B>,
   ) -> App<'a, Self, B>
   where
     Self: 'a,
     'a: 'b;
 }
 
-pub trait Applicative<Fn>: Functor<Fn>
+pub trait Applicative<Func>: Functor<Func>
 {
   fn pure<'a, A: 'a>(a: A) -> App<'a, Self, A>;
 
   fn apply<'a, 'b, A: 'a, B: 'a, F: 'a>(
-    app: App<'a, Self, BiApp<'b, Fn, A, B>>,
+    app: App<'a, Self, BiApp<'b, Func, A, B>>,
     fa: App<'a, Self, A>,
   ) -> App<'a, Self, A>
   where
@@ -29,34 +29,16 @@ pub trait Applicative<Fn>: Functor<Fn>
     'a: 'b;
 }
 
-pub trait Monad<Fn>: Applicative<Fn>
+pub trait Monad<Func>: Applicative<Func>
 {
   fn bind<'a, 'b, A: 'a, B: 'a>(
     ma: App<'a, Self, A>,
-    cont: BiApp<Fn, A, App<'a, Self, B>>,
+    cont: BiApp<'b, Func, A, App<'a, Self, B>>,
   ) -> App<'a, Self, B>
   where
     Self: 'a,
     'a: 'b;
 }
-
-// impl <'a, F: 'a, G: 'a, X: 'a, GX: 'a, FGX: 'a>
-//   WrapCompose <'a, F, G, X>
-//   for FGX
-// where
-//   G: TypeApp<'a, X, Applied = GX>,
-//   F: TypeApp<'a, GX, Applied = FGX>
-// {
-//   fn wrap_compose(self) -> App<'a, Compose<F, G>, X>
-//   {
-//     todo!()
-//   }
-
-//   fn unwrap_compose(wrapped: App<'a, Compose<F, G>, X>) -> Self
-//   {
-//     todo!()
-//   }
-// }
 
 impl<F, G> Functor<FunctionOnceF> for Compose<F, G>
 where

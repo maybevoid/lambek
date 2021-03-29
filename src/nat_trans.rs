@@ -1,12 +1,12 @@
 use crate::type_app::*;
 
-pub trait NaturalTransformation<Ref, F, G>
+pub trait NaturalTransformation<F, G>
 where
   F: TypeAppGeneric,
   G: TypeAppGeneric,
 {
   fn lift<'a, 'b, X>(
-    ctx: App<'b, Ref, Self>,
+    self,
     fx: App<'a, F, X>,
   ) -> App<'a, G, X>
   where
