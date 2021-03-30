@@ -98,3 +98,25 @@ where
 {
   type Applied = F::Applied;
 }
+
+pub struct Curry<F>(PhantomData<F>);
+
+impl<F: BiTypeCon> TypeCon for Curry<F> {}
+
+impl<'a, A: 'a, B: 'a, F: 'a> TypeApp<'a, (A, B)> for Curry<F>
+where
+  F: BiTypeApp<'a, A, B>,
+{
+  type Applied = F::Applied;
+}
+
+pub struct UnCurry<F>(PhantomData<F>);
+
+impl<F: TypeCon> BiTypeCon for UnCurry<F> {}
+
+impl<'a, A: 'a, B: 'a, F: 'a> BiTypeApp<'a, A, B> for UnCurry<F>
+where
+  F: TypeApp<'a, (A, B)>,
+{
+  type Applied = F::Applied;
+}
