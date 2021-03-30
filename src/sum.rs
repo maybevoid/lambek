@@ -70,16 +70,18 @@ where
   }
 }
 
-impl LiftRow for Bottom
+impl<Ref> LiftRow<Ref> for Bottom
+where
+  Ref: TypeCon,
 {
   fn lift<'a, 'b, F: 'a, G: 'a, Trans>(
-    _: Trans,
+    _: App<'b, Ref, Trans>,
     row: AppRow<'a, Self, F>,
   ) -> AppRow<'a, Self, G>
   where
     'a: 'b,
     Self: 'a,
-    Trans: NaturalTransformation<F, G> + Clone,
+    Trans: NaturalTransformation<Ref, F, G>,
     F: TypeAppGeneric,
     G: TypeAppGeneric,
   {
@@ -87,18 +89,19 @@ impl LiftRow for Bottom
   }
 }
 
-impl<X, Tail> LiftRow for Union<X, Tail>
+impl<Ref, X, Tail> LiftRow<Ref> for Union<X, Tail>
 where
-  Tail: LiftRow,
+  Ref: TypeCon,
+  Tail: LiftRow<Ref>,
 {
   fn lift<'a, 'b, F: 'a, G: 'a, Trans>(
-    trans: Trans,
+    trans: App<'b, Ref, Trans>,
     row: AppRow<'a, Self, F>,
   ) -> AppRow<'a, Self, G>
   where
     'a: 'b,
     Self: 'a,
-    Trans: NaturalTransformation<F, G> + Clone,
+    Trans: NaturalTransformation<Ref, F, G>,
     F: TypeAppGeneric,
     G: TypeAppGeneric,
   {

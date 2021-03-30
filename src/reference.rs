@@ -175,26 +175,6 @@ impl IsOwn for Own
   }
 }
 
-impl CloneApp for Own
-{
-  fn clone_app<'a, X: 'a>(fx: &App<'a, Self, X>) -> App<'a, Self, X>
-  where
-    X: Clone,
-  {
-    wrap_app(fx.get_applied_borrow().clone())
-  }
-}
-
-impl CloneApp for BoxF
-{
-  fn clone_app<'a, X: 'a>(fx: &App<'a, Self, X>) -> App<'a, Self, X>
-  where
-    X: Clone,
-  {
-    wrap_app(fx.get_applied_borrow().clone())
-  }
-}
-
 impl TypeCon for BoxF {}
 
 impl<'a, X: 'a + ?Sized> TypeApp<'a, X> for BoxF

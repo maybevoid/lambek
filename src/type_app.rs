@@ -238,12 +238,6 @@ pub trait HasTypeApp<'a, F: 'a + ?Sized, X: 'a + ?Sized>: 'a
   /// by calling `with_type_app` with a continuation implementing
   /// [TypeAppCont]. The continuation is then called with the
   /// trait bound `F: TypeApp<'a, X>` present.
-  ///
-  /// Due to limitation of dyn traits, the return value from
-  /// [TypeAppCont] has to be wrapped in a `Box<dyn Any>`.
-  /// An alternative to `with_type_app` is to use
-  /// [TypeAppGeneric], which allows us to recover the
-  /// `TypeApp` trait bound if it is implemented for all `X`.
   fn with_type_app<'b>(
     &self,
     cont: Box<dyn TypeAppCont<'a, F, X, ()> + 'b>,
@@ -256,20 +250,17 @@ pub struct App<'a, F: 'a + ?Sized, X: 'a + ?Sized>(
   pub Box<dyn HasTypeApp<'a, F, X>>,
 );
 
-pub trait CloneApp
+pub trait CloneApp: TypeCon
 {
-  fn clone_app<'a, X: 'a>(fx: &App<'a, Self, X>) -> App<'a, Self, X>
-  where
-    X: Clone;
+  fn clone_app<'a, X: 'a>(fx: &App<'a, Self, X>) -> App<'a, Self, X>;
 }
 
-pub fn with_type_app<'a, 'b, F: 'a + ?Sized, X: 'a + ?Sized, R: 'a, Cont: 'b>(
+pub fn with_type_app<'a, 'b, F: 'a + ?Sized, X: 'a + ?Sized, R: 'a>(
   applied: &'b App<'a, F, X>,
-  cont: Cont,
+  cont: impl TypeAppCont<'a, F, X, R>,
 ) -> R
 where
   'a: 'b,
-  Cont: TypeAppCont<'a, F, X, R>,
 {
   struct WrapCont<'b, Cont, R>
   {
