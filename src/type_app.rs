@@ -26,10 +26,7 @@
 //! trait bounds with `TypeApp` constraints. See
 //! [Functor](crate::functor::Functor) for a practical use of [App].
 
-use std::{
-  any::Any,
-  marker::PhantomData,
-};
+use std::marker::PhantomData;
 
 /// A proxy type `F: TypeCon` to mark itself as having the kind
 /// `Type -> Type`.
@@ -247,10 +244,11 @@ pub trait HasTypeApp<'a, F: 'a + ?Sized, X: 'a + ?Sized>: 'a
   /// An alternative to `with_type_app` is to use
   /// [TypeAppGeneric], which allows us to recover the
   /// `TypeApp` trait bound if it is implemented for all `X`.
-  fn with_type_app(
+  fn with_type_app<'b>(
     &self,
-    cont: Box<dyn TypeAppCont<'a, F, X, Box<dyn Any>>>,
-  ) -> Box<dyn Any>;
+    cont: Box<dyn TypeAppCont<'a, F, X, ()> + 'b>,
+  ) where
+    'a: 'b;
 }
 
 /// Newtype for a boxed value of [HasTypeApp].
@@ -263,6 +261,47 @@ pub trait CloneApp
   fn clone_app<'a, X: 'a>(fx: &App<'a, Self, X>) -> App<'a, Self, X>
   where
     X: Clone;
+}
+
+pub fn with_type_app<'a, 'b, F: 'a + ?Sized, X: 'a + ?Sized, R: 'a, Cont: 'b>(
+  applied: &'b App<'a, F, X>,
+  cont: Cont,
+) -> R
+where
+  'a: 'b,
+  Cont: TypeAppCont<'a, F, X, R>,
+{
+  struct WrapCont<'b, Cont, R>
+  {
+    cont: Box<Cont>,
+    result: &'b mut Option<R>,
+    phantom: PhantomData<R>,
+  }
+
+  impl<'a, 'b, F: 'a + ?Sized, X: 'a + ?Sized, R: 'a, Cont>
+    TypeAppCont<'a, F, X, ()> for WrapCont<'b, Cont, R>
+  where
+    Cont: TypeAppCont<'a, F, X, R>,
+  {
+    fn on_type_app(self: Box<Self>)
+    where
+      F: TypeApp<'a, X>,
+    {
+      let res = self.cont.on_type_app();
+      *self.result = Some(res);
+    }
+  }
+
+  let mut result: Option<R> = None;
+  let wrap_cont = WrapCont {
+    cont: Box::new(cont),
+    result: &mut result,
+    phantom: PhantomData,
+  };
+
+  applied.with_type_app(Box::new(wrap_cont));
+
+  result.unwrap()
 }
 
 impl<'a, F: 'a + ?Sized, X: 'a + ?Sized> App<'a, F, X>
@@ -302,10 +341,11 @@ impl<'a, F: 'a + ?Sized, X: 'a + ?Sized> HasTypeApp<'a, F, X> for App<'a, F, X>
     self.0.get_applied_borrow_mut()
   }
 
-  fn with_type_app(
+  fn with_type_app<'b>(
     &self,
-    cont: Box<dyn TypeAppCont<'a, F, X, Box<dyn Any>>>,
-  ) -> Box<dyn Any>
+    cont: Box<dyn TypeAppCont<'a, F, X, ()> + 'b>,
+  ) where
+    'a: 'b,
   {
     self.0.with_type_app(cont)
   }
@@ -339,10 +379,11 @@ where
       &mut self.0
     }
 
-    fn with_type_app(
+    fn with_type_app<'b>(
       &self,
-      cont: Box<dyn TypeAppCont<'a, F, X, Box<dyn Any>>>,
-    ) -> Box<dyn Any>
+      cont: Box<dyn TypeAppCont<'a, F, X, ()> + 'b>,
+    ) where
+      'a: 'b,
     {
       cont.on_type_app()
     }
