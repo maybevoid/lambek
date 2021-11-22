@@ -4,7 +4,7 @@ use crate::{
   type_app::*,
 };
 
-type VecOptionF = Compose<VecF, OptionF>;
+type VecOptionF = ComposeApp<VecF, OptionF>;
 
 #[test]
 fn test_fmap_vec_option()
@@ -12,11 +12,11 @@ fn test_fmap_vec_option()
   let xs1: Vec<App<OptionF, u64>> =
     vec![wrap_app(Some(42)), wrap_app(None), wrap_app(Some(64))];
 
-  let xs2: App<Compose<VecF, OptionF>, u64> = wrap_app(wrap_app(xs1));
+  let xs2: App<ComposeApp<VecF, OptionF>, u64> = wrap_app(wrap_app(xs1));
 
   let mut base = 2;
 
-  let xs3: App<Compose<VecF, OptionF>, String> = VecOptionF::fmap(
+  let xs3: App<ComposeApp<VecF, OptionF>, String> = VecOptionF::fmap(
     xs2,
     wrap_function_mut(|x| {
       base *= x;

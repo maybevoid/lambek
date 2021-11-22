@@ -40,15 +40,15 @@ pub trait Monad<Func>: Applicative<Func>
     'a: 'b;
 }
 
-impl<F, G> Functor<FunctionOnceF> for Compose<F, G>
+impl<F, G> Functor<FunctionOnceF> for ComposeApp<F, G>
 where
   F: Functor<FunctionOnceF>,
   G: Functor<FunctionOnceF>,
 {
   fn fmap<'a, 'b, A: 'a, B: 'a>(
-    xs1: App<'a, Compose<F, G>, A>,
+    xs1: App<'a, ComposeApp<F, G>, A>,
     f1: BiApp<'b, FunctionOnceF, A, B>,
-  ) -> App<'a, Compose<F, G>, B>
+  ) -> App<'a, ComposeApp<F, G>, B>
   where
     Self: 'a,
     F: 'a,
@@ -61,15 +61,15 @@ where
   }
 }
 
-impl<F, G> Functor<FunctionF> for Compose<F, G>
+impl<F, G> Functor<FunctionF> for ComposeApp<F, G>
 where
   F: Functor<FunctionF>,
   G: Functor<FunctionF>,
 {
   fn fmap<'a, 'b, A: 'a, B: 'a>(
-    fga1: App<'a, Compose<F, G>, A>,
+    fga1: App<'a, ComposeApp<F, G>, A>,
     mapper1: BiApp<'b, FunctionF, A, B>,
-  ) -> App<'a, Compose<F, G>, B>
+  ) -> App<'a, ComposeApp<F, G>, B>
   where
     Self: 'a,
     F: 'a,
@@ -86,15 +86,15 @@ where
   }
 }
 
-impl<F, G> Functor<FunctionMutF> for Compose<F, G>
+impl<F, G> Functor<FunctionMutF> for ComposeApp<F, G>
 where
   F: Functor<FunctionMutF>,
   G: Functor<FunctionMutF>,
 {
   fn fmap<'a, 'b, A: 'a, B: 'a>(
-    fga1: App<'a, Compose<F, G>, A>,
+    fga1: App<'a, ComposeApp<F, G>, A>,
     mut mapper1: BiApp<'b, FunctionMutF, A, B>,
-  ) -> App<'a, Compose<F, G>, B>
+  ) -> App<'a, ComposeApp<F, G>, B>
   where
     Self: 'a,
     F: 'a,

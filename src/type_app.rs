@@ -43,9 +43,7 @@ use std::marker::PhantomData;
 /// [TypeAppGeneric] may sometimes be too strict, i.e. we may
 /// want to allow types that implement [TypeApp] for some
 /// constrained type arguments such as `Send` or `'static`.
-pub trait TypeCon
-{
-}
+pub trait TypeCon {}
 
 /// A type `F: TypeApp<X>` have the associated type `Applied` as the
 /// result of applying a type `F` of kind `Type -> Type` to `X`.
@@ -101,6 +99,8 @@ pub trait TypeApp<'a, X: 'a + ?Sized>: TypeCon + 'a
 {
   type Applied: 'a + ?Sized;
 }
+
+pub type Applied<'a, F, X> = <F as TypeApp<'a, X>>::Applied;
 
 pub trait TypeAppGeneric: TypeCon + Sized
 {
@@ -448,35 +448,23 @@ macro_rules! impl_type_app {
 
 pub struct Compose<F: ?Sized, G: ?Sized>(PhantomData<F>, PhantomData<G>);
 
-// pub trait HasCompose <'a, F: 'a, G: 'a, X: 'a >
-// {
-//   fn get_compose(self: Box<Self>) -> F::Applied
-//   where
-//     G: TypeApp<'a, X>,
-//     F: TypeApp<'a, G::Applied>
-//   ;
-
-//   fn get_compose_wrapped(self: Box<Self>) ->
-//     App<'a, F, App<'a, G, X>>
-//   ;
-// }
-
-// fn wrap_compose <'a, F: 'a, G: 'a, X: 'a, FGX: 'a, GX: 'a >
-//   (fgx: FGX)
-//   -> Box< dyn HasCompose<'a, F, G, X> + 'a >
-// where
-//   G: TypeApp<'a, X, Applied = GX>,
-//   F: TypeApp<'a, GX, Applied = FGX>,
-// {
-//   struct Composed<X>(X);
-
-//   todo!()
-// }
-
 impl<F: ?Sized, G: ?Sized> TypeCon for Compose<F, G> {}
 
+impl<'a, F: 'a + ?Sized, G: 'a + ?Sized, X: 'a + ?Sized, FX: 'a, GX: 'a>
+  TypeApp<'a, X> for Compose<F, G>
+where
+  G: TypeApp<'a, X, Applied = GX>,
+  F: TypeApp<'a, GX, Applied = FX>,
+{
+  type Applied = FX;
+}
+
+pub struct ComposeApp<F: ?Sized, G: ?Sized>(PhantomData<F>, PhantomData<G>);
+
+impl<F: ?Sized, G: ?Sized> TypeCon for ComposeApp<F, G> {}
+
 impl<'a, F: 'a + ?Sized, G: 'a + ?Sized, X: 'a + ?Sized> TypeApp<'a, X>
-  for Compose<F, G>
+  for ComposeApp<F, G>
 {
   type Applied = App<'a, F, App<'a, G, X>>;
 }
@@ -521,6 +509,15 @@ impl<A: ?Sized> TypeCon for Const<A> {}
 impl<'a, A: 'a + ?Sized, X: 'a + ?Sized> TypeApp<'a, X> for Const<A>
 {
   type Applied = A;
+}
+
+pub struct AppF<F: ?Sized>(PhantomData<F>);
+
+impl<F: ?Sized> TypeCon for AppF<F> {}
+
+impl<'a, X: 'a + ?Sized, F: 'a + ?Sized> TypeApp<'a, X> for AppF<F>
+{
+  type Applied = App<'a, F, X>;
 }
 
 /// `App<VecF, X> ~ Vec<X>`

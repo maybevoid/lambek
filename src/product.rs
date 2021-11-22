@@ -4,9 +4,7 @@ use crate::{
   type_app::*,
 };
 
-pub trait Product
-{
-}
+pub trait Product {}
 
 pub struct Top;
 

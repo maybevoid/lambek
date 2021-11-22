@@ -83,7 +83,7 @@ impl CloneApp for Borrow
 {
   fn clone_app<'a, X: 'a>(fx: &App<'a, Self, X>) -> App<'a, Self, X>
   {
-    wrap_app(fx.get_applied_borrow().clone())
+    wrap_app(<&X>::clone(fx.get_applied_borrow()))
   }
 }
 

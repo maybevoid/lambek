@@ -1,6 +1,6 @@
 [package]
 name = "lambek"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Soares Chen <soares.chen@maybevoid.com>"]
 edition = "2018"
 description = "Type-Level Programming in Rust"
