@@ -129,17 +129,14 @@ use crate::type_app::{
   TypeApp,
 };
 
-/**
-   The type equality constraint, a.k.a reflexivity,  provides witness that
-   two types are equal.
-
-*/
 pub trait Refl: Sized
 {
-  /**
-     The associated type `Refl` must always equal to `Self`.
-  */
   type Refl: Sized;
+}
+
+impl<T> Refl for T
+{
+  type Refl = T;
 }
 
 pub trait HasRefl<T1, T2>
@@ -174,7 +171,7 @@ where
     fn witness() -> Self::Witness {}
   }
 
-  fn exist_witness<T1, T2>(
+  fn has_refl_inner<T1, T2>(
   ) -> impl HasRefl<T1, T2, T1 = T1, T2 = T2> + HasRefl<T2, T1, T1 = T2, T2 = T1>
   where
     T1: Refl<Refl = T2>,
@@ -183,7 +180,7 @@ where
     T1::witness()
   }
 
-  exist_witness::<T1, T2>()
+  has_refl_inner::<T1, T2>()
 }
 
 pub fn refl_symmetric<W, T1, T2>() -> impl HasRefl<T2, T1, T1 = T2, T2 = T1>
@@ -206,67 +203,32 @@ where
   T1: Refl<Refl = T2>,
   T2: Refl<Refl = T3>,
 {
-  trait ReflTransitive<T1, T2, T3>
+  trait ReflTransitive: Refl
   {
-    type T1: Refl<Refl = Self::T2> + Refl<Refl = Self::T3>;
-    type T2: Refl<Refl = Self::T1> + Refl<Refl = Self::T3>;
-    type T3: Refl<Refl = Self::T1> + Refl<Refl = Self::T2>;
-  }
-
-  impl<A, T> ReflTransitive<T, T, T> for A
-  {
-    type T1 = T;
-    type T2 = T;
-    type T3 = T;
-  }
-
-  trait ReflTransitiveWitness: Refl
-  {
-    type Witness: ReflTransitive<
+    type Witness: HasRefl<
       Self,
-      Self::Refl,
       <Self::Refl as Refl>::Refl,
       T1 = Self,
-      T2 = Self::Refl,
-      T3 = <Self::Refl as Refl>::Refl,
+      T2 = <Self::Refl as Refl>::Refl,
     >;
 
     fn witness() -> Self::Witness;
   }
 
-  impl<T> ReflTransitiveWitness for T
+  impl<T> ReflTransitive for T
   {
     type Witness = ();
 
     fn witness() -> Self::Witness {}
   }
 
-  fn exist_transitive_witness<T1, T2, T3>(
-  ) -> impl ReflTransitive<T1, T2, T3, T1 = T1, T2 = T2, T3 = T3>
-  where
-    T1: Refl<Refl = T2>,
-    T2: Refl<Refl = T3>,
-    T1: ReflTransitiveWitness,
+  fn refl_transitive_inner<T: ReflTransitive>(
+  ) -> impl HasRefl<T, <T::Refl as Refl>::Refl, T1 = T, T2 = <T::Refl as Refl>::Refl>
   {
-    T1::witness()
+    T::witness()
   }
 
-  fn extract_transitive_refl<W, T1, T2, T3>(
-    _: W
-  ) -> impl HasRefl<W::T1, W::T3, T1 = W::T1, T2 = W::T3>
-  where
-    W: ReflTransitive<T1, T2, T3>,
-  {
-    has_refl::<W::T1, W::T3>()
-  }
-
-  let witness = exist_transitive_witness::<T1, T2, T3>();
-  extract_transitive_refl(witness)
-}
-
-impl<T> Refl for T
-{
-  type Refl = T;
+  refl_transitive_inner::<T1>()
 }
 
 /**
