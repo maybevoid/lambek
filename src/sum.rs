@@ -4,7 +4,9 @@ use crate::{
   type_app::*,
 };
 
-pub trait Sum {}
+pub trait Sum
+{
+}
 
 pub enum Bottom {}
 

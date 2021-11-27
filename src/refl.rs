@@ -142,6 +142,128 @@ pub trait Refl: Sized
   type Refl: Sized;
 }
 
+pub trait HasRefl<T1, T2>
+{
+  type T1: Refl<Refl = Self::T2>;
+  type T2: Refl<Refl = Self::T1>;
+}
+
+impl<A, T> HasRefl<T, T> for A
+{
+  type T1 = T;
+  type T2 = T;
+}
+
+pub fn has_refl<T1, T2>(
+) -> impl HasRefl<T1, T2, T1 = T1, T2 = T2> + HasRefl<T2, T1, T1 = T2, T2 = T1>
+where
+  T1: Refl<Refl = T2>,
+{
+  trait ReflWitness: Refl
+  {
+    type Witness: HasRefl<Self, Self::Refl, T1 = Self, T2 = Self::Refl>
+      + HasRefl<Self::Refl, Self, T1 = Self::Refl, T2 = Self>;
+
+    fn witness() -> Self::Witness;
+  }
+
+  impl<T> ReflWitness for T
+  {
+    type Witness = ();
+
+    fn witness() -> Self::Witness {}
+  }
+
+  fn exist_witness<T1, T2>(
+  ) -> impl HasRefl<T1, T2, T1 = T1, T2 = T2> + HasRefl<T2, T1, T1 = T2, T2 = T1>
+  where
+    T1: Refl<Refl = T2>,
+    T1: ReflWitness,
+  {
+    T1::witness()
+  }
+
+  exist_witness::<T1, T2>()
+}
+
+pub fn refl_symmetric<W, T1, T2>() -> impl HasRefl<T2, T1, T1 = T2, T2 = T1>
+where
+  W: HasRefl<T1, T2, T1 = T1, T2 = T2>,
+{
+  fn refl_symmetric_inner<W, T1, T2>(
+  ) -> impl HasRefl<W::T2, W::T1, T1 = W::T2, T2 = W::T1>
+  where
+    W: HasRefl<T1, T2>,
+  {
+    has_refl::<W::T1, W::T2>()
+  }
+
+  refl_symmetric_inner::<W, T1, T2>()
+}
+
+pub fn refl_transitive<T1, T2, T3>() -> impl HasRefl<T1, T3, T1 = T1, T2 = T3>
+where
+  T1: Refl<Refl = T2>,
+  T2: Refl<Refl = T3>,
+{
+  trait ReflTransitive<T1, T2, T3>
+  {
+    type T1: Refl<Refl = Self::T2> + Refl<Refl = Self::T3>;
+    type T2: Refl<Refl = Self::T1> + Refl<Refl = Self::T3>;
+    type T3: Refl<Refl = Self::T1> + Refl<Refl = Self::T2>;
+  }
+
+  impl<A, T> ReflTransitive<T, T, T> for A
+  {
+    type T1 = T;
+    type T2 = T;
+    type T3 = T;
+  }
+
+  trait ReflTransitiveWitness: Refl
+  {
+    type Witness: ReflTransitive<
+      Self,
+      Self::Refl,
+      <Self::Refl as Refl>::Refl,
+      T1 = Self,
+      T2 = Self::Refl,
+      T3 = <Self::Refl as Refl>::Refl,
+    >;
+
+    fn witness() -> Self::Witness;
+  }
+
+  impl<T> ReflTransitiveWitness for T
+  {
+    type Witness = ();
+
+    fn witness() -> Self::Witness {}
+  }
+
+  fn exist_transitive_witness<T1, T2, T3>(
+  ) -> impl ReflTransitive<T1, T2, T3, T1 = T1, T2 = T2, T3 = T3>
+  where
+    T1: Refl<Refl = T2>,
+    T2: Refl<Refl = T3>,
+    T1: ReflTransitiveWitness,
+  {
+    T1::witness()
+  }
+
+  fn extract_transitive_refl<W, T1, T2, T3>(
+    _: W
+  ) -> impl HasRefl<W::T1, W::T3, T1 = W::T1, T2 = W::T3>
+  where
+    W: ReflTransitive<T1, T2, T3>,
+  {
+    has_refl::<W::T1, W::T3>()
+  }
+
+  let witness = exist_transitive_witness::<T1, T2, T3>();
+  extract_transitive_refl(witness)
+}
+
 impl<T> Refl for T
 {
   type Refl = T;
@@ -156,6 +278,7 @@ pub trait ReflSelf: Refl
      Reflect a `self` type
   */
   fn refl_self(self) -> Self::Refl;
+  fn refl_self_right(x: Self::Refl) -> Self;
 
   /**
      Reflect a `&self`
@@ -171,6 +294,8 @@ pub trait ReflSelf: Refl
      Reflect `Box<Self>`
   */
   fn refl_self_box(self: Box<Self>) -> Box<Self::Refl>;
+
+  fn refl_right_ref(right: &Self::Refl) -> &Self;
 }
 
 impl<T> ReflSelf for T
@@ -178,6 +303,11 @@ impl<T> ReflSelf for T
   fn refl_self(self) -> Self::Refl
   {
     self
+  }
+
+  fn refl_self_right(x: Self::Refl) -> Self
+  {
+    x
   }
 
   fn refl_self_ref(&self) -> &Self::Refl
@@ -193,6 +323,11 @@ impl<T> ReflSelf for T
   fn refl_self_box(self: Box<Self>) -> Box<Self::Refl>
   {
     self
+  }
+
+  fn refl_right_ref(right: &Self::Refl) -> &Self
+  {
+    right
   }
 }
 
@@ -280,11 +415,25 @@ where
   T1::refl_self(x)
 }
 
+pub fn reflect_value_right<T1, T2>(x: T2) -> T1
+where
+  T1: Refl<Refl = T2>,
+{
+  T1::refl_self_right(x)
+}
+
 pub fn reflect_value_ref<T1, T2>(x: &T1) -> &T2
 where
   T1: Refl<Refl = T2>,
 {
   T1::refl_self_ref(x)
+}
+
+pub fn reflect_right_ref<T1, T2>(x: &T2) -> &T1
+where
+  T1: Refl<Refl = T2>,
+{
+  T1::refl_right_ref(x)
 }
 
 pub fn reflect_value_mut<T1, T2>(x: &mut T1) -> &mut T2
