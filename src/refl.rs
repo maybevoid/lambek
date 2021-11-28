@@ -122,11 +122,16 @@
    any higher kinded types using the proxy types that implement [`TypeApp`].
 */
 
-use crate::type_app::{
-  App,
-  AppF,
-  Applied,
-  TypeApp,
+use crate::{
+  reference::Borrow,
+  type_app::{
+    App,
+    AppF,
+    Applied,
+    Compose,
+    OptionF,
+    TypeApp,
+  },
 };
 
 pub trait Refl: Sized
@@ -229,6 +234,99 @@ where
   }
 
   refl_transitive_inner::<T1>()
+}
+
+pub fn vec_congruence<T1, T2>() -> impl HasRefl<Vec<T1>, Vec<T2>>
+where
+  T1: Refl<Refl = T2>,
+{
+  trait VecCongruence: Refl
+  {
+    type Witness: HasRefl<Vec<Self>, Vec<Self::Refl>>;
+    fn witness() -> Self::Witness;
+  }
+
+  impl<T> VecCongruence for T
+  {
+    type Witness = ();
+    fn witness() -> Self::Witness {}
+  }
+
+  fn vec_congruence_inner<T>() -> impl HasRefl<Vec<T>, Vec<T::Refl>>
+  where
+    T: VecCongruence,
+  {
+    T::witness()
+  }
+
+  vec_congruence_inner::<T1>()
+}
+
+pub fn app_congruence<'a, F: 'a, T1: 'a, T2: 'a>(
+) -> impl HasRefl<<F as TypeApp<'a, T1>>::Applied, <F as TypeApp<'a, T2>>::Applied>
+where
+  T1: Refl<Refl = T2>,
+  F: TypeApp<'a, T1>,
+  F: TypeApp<'a, T2>,
+  <F as TypeApp<'a, T1>>::Applied: Sized,
+  <F as TypeApp<'a, T2>>::Applied: Sized,
+{
+  trait AppCongruence<'a, F>: Refl + 'a
+  where
+    F: TypeApp<'a, Self>,
+    F: TypeApp<'a, Self::Refl>,
+    <F as TypeApp<'a, Self>>::Applied: Sized,
+    <F as TypeApp<'a, Self::Refl>>::Applied: Sized,
+  {
+    type Witness: HasRefl<
+      <F as TypeApp<'a, Self>>::Applied,
+      <F as TypeApp<'a, Self::Refl>>::Applied,
+    >;
+    fn witness() -> Self::Witness;
+  }
+
+  impl<'a, F, T: 'a> AppCongruence<'a, F> for T
+  where
+    F: TypeApp<'a, Self>,
+    F: TypeApp<'a, Self::Refl>,
+    <F as TypeApp<'a, Self>>::Applied: Sized,
+    <F as TypeApp<'a, Self::Refl>>::Applied: Sized,
+  {
+    type Witness = ();
+    fn witness() -> Self::Witness {}
+  }
+
+  fn app_congruence_inner<'a, F, T>() -> impl HasRefl<
+    <F as TypeApp<'a, T>>::Applied,
+    <F as TypeApp<'a, T::Refl>>::Applied,
+  >
+  where
+    T: AppCongruence<'a, F>,
+    F: TypeApp<'a, T>,
+    F: TypeApp<'a, T::Refl>,
+    <F as TypeApp<'a, T>>::Applied: Sized,
+    <F as TypeApp<'a, T::Refl>>::Applied: Sized,
+  {
+    T::witness()
+  }
+
+  app_congruence_inner::<'a, F, T1>()
+}
+
+pub fn option_congruence<'a, T1: 'a, T2: 'a>(
+) -> impl HasRefl<Option<T1>, Option<T2>> + 'a
+where
+  T1: Refl<Refl = T2>,
+{
+  app_congruence::<'a, OptionF, T1, T2>()
+}
+
+pub fn option_ref_congruence<'a, T1: 'a, T2: 'a>(
+) -> impl HasRefl<&'a Option<T1>, &'a Option<T2>>
+where
+  T1: Refl<Refl = T2>,
+{
+  app_congruence::<'a, Compose<Borrow, OptionF>, T1, T2>()
 }
 
 /**
