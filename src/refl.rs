@@ -144,38 +144,36 @@ impl<T: ?Sized> Refl for T
   type Refl = T;
 }
 
-pub trait HasRefl<T1: ?Sized, T2: ?Sized>: Sized
+pub trait HasReflUnrestricted<T1: ?Sized, T2: ?Sized>: Sized
 {
   type Left: Refl<Refl = Self::Right> + ?Sized;
   type Right: Refl<Refl = Self::Left> + ?Sized;
 }
 
-impl<A, T: ?Sized> HasRefl<T, T> for A
+impl<A, T: ?Sized> HasReflUnrestricted<T, T> for A
 {
   type Left = T;
   type Right = T;
 }
 
-pub trait HasRefl2<T1: ?Sized, T2: ?Sized>:
-  HasRefl<T1, T2, Left = T1, Right = T2>
+pub trait HasRefl<T1: ?Sized, T2: ?Sized>:
+  HasReflUnrestricted<T1, T2, Left = T1, Right = T2>
 {
 }
 
-impl<A, T1: ?Sized, T2: ?Sized> HasRefl2<T1, T2> for A where
-  A: HasRefl<T1, T2, Left = T1, Right = T2>
+impl<A, T1: ?Sized, T2: ?Sized> HasRefl<T1, T2> for A where
+  A: HasReflUnrestricted<T1, T2, Left = T1, Right = T2>
 {
 }
 
 pub fn has_refl<T1: ?Sized, T2: ?Sized>(
-) -> impl HasRefl<T1, T2, Left = T1, Right = T2>
-     + HasRefl<T2, T1, Left = T2, Right = T1>
+) -> impl HasRefl<T1, T2> + HasRefl<T2, T1>
 where
   T1: Refl<Refl = T2>,
 {
   trait ReflWitness: Refl
   {
-    type Witness: HasRefl<Self, Self::Refl, Left = Self, Right = Self::Refl>
-      + HasRefl<Self::Refl, Self, Left = Self::Refl, Right = Self>;
+    type Witness: HasRefl<Self, Self::Refl> + HasRefl<Self::Refl, Self>;
 
     fn witness() -> Self::Witness;
   }
@@ -188,8 +186,7 @@ where
   }
 
   fn has_refl_inner<T1: ?Sized, T2: ?Sized>(
-  ) -> impl HasRefl<T1, T2, Left = T1, Right = T2>
-       + HasRefl<T2, T1, Left = T2, Right = T1>
+  ) -> impl HasRefl<T1, T2> + HasRefl<T2, T1>
   where
     T1: Refl<Refl = T2>,
     T1: ReflWitness,
@@ -200,14 +197,13 @@ where
   has_refl_inner::<T1, T2>()
 }
 
-pub fn refl_symmetric<W, T1, T2>() -> impl HasRefl<T2, T1, Left = T2, Right = T1>
+pub fn refl_symmetric<W, T1, T2>() -> impl HasRefl<T2, T1>
 where
-  W: HasRefl<T1, T2, Left = T1, Right = T2>,
+  W: HasRefl<T1, T2>,
 {
-  fn refl_symmetric_inner<W, T1, T2>(
-  ) -> impl HasRefl<W::Right, W::Left, Left = W::Right, Right = W::Left>
+  fn refl_symmetric_inner<W, T1, T2>() -> impl HasRefl<W::Right, W::Left>
   where
-    W: HasRefl<T1, T2>,
+    W: HasReflUnrestricted<T1, T2>,
   {
     has_refl::<W::Left, W::Right>()
   }
@@ -216,19 +212,14 @@ where
 }
 
 pub fn refl_transitive<T1: ?Sized, T2: ?Sized, T3: ?Sized>(
-) -> impl HasRefl<T1, T3, Left = T1, Right = T3>
+) -> impl HasRefl<T1, T3>
 where
   T1: Refl<Refl = T2>,
   T2: Refl<Refl = T3>,
 {
   trait ReflTransitive: Refl
   {
-    type Witness: HasRefl<
-      Self,
-      <Self::Refl as Refl>::Refl,
-      Left = Self,
-      Right = <Self::Refl as Refl>::Refl,
-    >;
+    type Witness: HasRefl<Self, <Self::Refl as Refl>::Refl>;
 
     fn witness() -> Self::Witness;
   }
@@ -240,12 +231,8 @@ where
     fn witness() -> Self::Witness {}
   }
 
-  fn refl_transitive_inner<T: ReflTransitive + ?Sized>() -> impl HasRefl<
-    T,
-    <T::Refl as Refl>::Refl,
-    Left = T,
-    Right = <T::Refl as Refl>::Refl,
-  >
+  fn refl_transitive_inner<T: ReflTransitive + ?Sized>(
+  ) -> impl HasRefl<T, <T::Refl as Refl>::Refl>
   {
     T::witness()
   }
@@ -282,41 +269,36 @@ where
   vec_congruence_inner::<T1>()
 }
 
-pub fn app_congruence<'a, F: 'a, T1: 'a, T2: 'a>(
+pub fn app_congruence<'a, F: ?Sized, T1: 'a + ?Sized, T2: 'a + ?Sized>(
 ) -> impl HasRefl<<F as TypeApp<'a, T1>>::Applied, <F as TypeApp<'a, T2>>::Applied>
 where
   T1: Refl<Refl = T2>,
   F: TypeApp<'a, T1>,
   F: TypeApp<'a, T2>,
-  <F as TypeApp<'a, T1>>::Applied: Sized,
-  <F as TypeApp<'a, T2>>::Applied: Sized,
 {
-  trait AppCongruence<'a, F>: Refl + 'a
+  trait AppCongruence<'a, F: ?Sized>: Refl + 'a
   where
     F: TypeApp<'a, Self>,
     F: TypeApp<'a, Self::Refl>,
-    <F as TypeApp<'a, Self>>::Applied: Sized,
-    <F as TypeApp<'a, Self::Refl>>::Applied: Sized,
   {
     type Witness: HasRefl<
       <F as TypeApp<'a, Self>>::Applied,
       <F as TypeApp<'a, Self::Refl>>::Applied,
     >;
+
     fn witness() -> Self::Witness;
   }
 
-  impl<'a, F, T: 'a> AppCongruence<'a, F> for T
+  impl<'a, F: ?Sized, T: 'a + ?Sized> AppCongruence<'a, F> for T
   where
     F: TypeApp<'a, Self>,
     F: TypeApp<'a, Self::Refl>,
-    <F as TypeApp<'a, Self>>::Applied: Sized,
-    <F as TypeApp<'a, Self::Refl>>::Applied: Sized,
   {
     type Witness = ();
     fn witness() -> Self::Witness {}
   }
 
-  fn app_congruence_inner<'a, F, T>() -> impl HasRefl<
+  fn app_congruence_inner<'a, F: ?Sized, T: ?Sized>() -> impl HasRefl<
     <F as TypeApp<'a, T>>::Applied,
     <F as TypeApp<'a, T::Refl>>::Applied,
   >
@@ -324,8 +306,6 @@ where
     T: AppCongruence<'a, F>,
     F: TypeApp<'a, T>,
     F: TypeApp<'a, T::Refl>,
-    <F as TypeApp<'a, T>>::Applied: Sized,
-    <F as TypeApp<'a, T::Refl>>::Applied: Sized,
   {
     T::witness()
   }
