@@ -134,29 +134,37 @@ use crate::{
   },
 };
 
-pub trait Refl: Sized
+pub trait Refl
 {
-  type Refl: Sized;
+  type Refl: ?Sized;
 }
 
-impl<T> Refl for T
+pub trait SizedRefl: Refl + Sized
+where
+  Self::Refl: Sized,
+{
+}
+
+impl<T: ?Sized> Refl for T
 {
   type Refl = T;
 }
 
-pub trait HasRefl<T1, T2>
+impl<T> SizedRefl for T {}
+
+pub trait HasRefl<T1: ?Sized, T2: ?Sized>: Sized
 {
-  type T1: Refl<Refl = Self::T2>;
-  type T2: Refl<Refl = Self::T1>;
+  type T1: Refl<Refl = Self::T2> + ?Sized;
+  type T2: Refl<Refl = Self::T1> + ?Sized;
 }
 
-impl<A, T> HasRefl<T, T> for A
+impl<A, T: ?Sized> HasRefl<T, T> for A
 {
   type T1 = T;
   type T2 = T;
 }
 
-pub fn has_refl<T1, T2>(
+pub fn has_refl<T1: ?Sized, T2: ?Sized>(
 ) -> impl HasRefl<T1, T2, T1 = T1, T2 = T2> + HasRefl<T2, T1, T1 = T2, T2 = T1>
 where
   T1: Refl<Refl = T2>,
@@ -169,14 +177,14 @@ where
     fn witness() -> Self::Witness;
   }
 
-  impl<T> ReflWitness for T
+  impl<T: ?Sized> ReflWitness for T
   {
     type Witness = ();
 
     fn witness() -> Self::Witness {}
   }
 
-  fn has_refl_inner<T1, T2>(
+  fn has_refl_inner<T1: ?Sized, T2: ?Sized>(
   ) -> impl HasRefl<T1, T2, T1 = T1, T2 = T2> + HasRefl<T2, T1, T1 = T2, T2 = T1>
   where
     T1: Refl<Refl = T2>,
@@ -203,7 +211,8 @@ where
   refl_symmetric_inner::<W, T1, T2>()
 }
 
-pub fn refl_transitive<T1, T2, T3>() -> impl HasRefl<T1, T3, T1 = T1, T2 = T3>
+pub fn refl_transitive<T1: ?Sized, T2: ?Sized, T3: ?Sized>(
+) -> impl HasRefl<T1, T3, T1 = T1, T2 = T3>
 where
   T1: Refl<Refl = T2>,
   T2: Refl<Refl = T3>,
@@ -220,14 +229,14 @@ where
     fn witness() -> Self::Witness;
   }
 
-  impl<T> ReflTransitive for T
+  impl<T: ?Sized> ReflTransitive for T
   {
     type Witness = ();
 
     fn witness() -> Self::Witness {}
   }
 
-  fn refl_transitive_inner<T: ReflTransitive>(
+  fn refl_transitive_inner<T: ReflTransitive + ?Sized>(
   ) -> impl HasRefl<T, <T::Refl as Refl>::Refl, T1 = T, T2 = <T::Refl as Refl>::Refl>
   {
     T::witness()
@@ -240,7 +249,9 @@ pub fn vec_congruence<T1, T2>() -> impl HasRefl<Vec<T1>, Vec<T2>>
 where
   T1: Refl<Refl = T2>,
 {
-  trait VecCongruence: Refl
+  trait VecCongruence: Refl + Sized
+  where
+    Self::Refl: Sized,
   {
     type Witness: HasRefl<Vec<Self>, Vec<Self::Refl>>;
     fn witness() -> Self::Witness;
@@ -255,6 +266,7 @@ where
   fn vec_congruence_inner<T>() -> impl HasRefl<Vec<T>, Vec<T::Refl>>
   where
     T: VecCongruence,
+    T::Refl: Sized,
   {
     T::witness()
   }
