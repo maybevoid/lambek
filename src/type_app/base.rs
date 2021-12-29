@@ -1,4 +1,3 @@
-
 /// A proxy type `F: TypeCon` to mark itself as having the kind
 /// `Type -> Type`.
 ///

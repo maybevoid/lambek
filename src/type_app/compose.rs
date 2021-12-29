@@ -1,7 +1,12 @@
-use super::base::{TypeCon, TypeApp};
-use super::dynamic::App;
-
 use core::marker::PhantomData;
+
+use super::{
+  base::{
+    TypeApp,
+    TypeCon,
+  },
+  dynamic::App,
+};
 
 pub struct Compose<F: ?Sized, G: ?Sized>(PhantomData<F>, PhantomData<G>);
 

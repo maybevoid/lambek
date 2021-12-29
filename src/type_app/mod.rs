@@ -28,17 +28,17 @@
 
 pub mod base;
 pub mod compose;
-pub mod identity;
-pub mod generic;
 pub mod dynamic;
+pub mod generic;
+pub mod identity;
+
+use core::marker::PhantomData;
 
 pub use base::*;
 pub use compose::*;
-pub use identity::*;
-pub use generic::*;
 pub use dynamic::*;
-
-use core::marker::PhantomData;
+pub use generic::*;
+pub use identity::*;
 
 impl<F> TypeAppGeneric for F
 where

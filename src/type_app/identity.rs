@@ -1,5 +1,13 @@
-use super::base::{TypeCon, TypeApp};
-use super::generic::{TypeAppGeneric, TypeAppCont};
+use super::{
+  base::{
+    TypeApp,
+    TypeCon,
+  },
+  generic::{
+    TypeAppCont,
+    TypeAppGeneric,
+  },
+};
 
 /// `App<Identity, X> ~ X`
 ///
