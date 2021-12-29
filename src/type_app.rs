@@ -43,9 +43,7 @@ use std::marker::PhantomData;
 /// [TypeAppGeneric] may sometimes be too strict, i.e. we may
 /// want to allow types that implement [TypeApp] for some
 /// constrained type arguments such as `Send` or `'static`.
-pub trait TypeCon
-{
-}
+pub trait TypeCon {}
 
 /// A type `F: TypeApp<X>` have the associated type `Applied` as the
 /// result of applying a type `F` of kind `Type -> Type` to `X`.

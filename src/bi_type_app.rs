@@ -3,9 +3,7 @@ use std::marker::PhantomData;
 use crate::type_app::*;
 
 // F: BiTypeCon :: Type -> Type -> Type
-pub trait BiTypeCon
-{
-}
+pub trait BiTypeCon {}
 
 pub trait BiTypeApp<'a, X: 'a + ?Sized, Y: 'a + ?Sized>:
   BiTypeCon + 'a

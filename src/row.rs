@@ -4,9 +4,7 @@ use crate::{
 };
 
 // Row: RowCon :: (Type -> Type) -> Type
-pub trait RowCon
-{
-}
+pub trait RowCon {}
 
 pub trait RowApp<'a, F: 'a + ?Sized>: RowCon
 where
