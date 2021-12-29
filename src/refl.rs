@@ -139,40 +139,43 @@ pub trait Refl
   type Refl: ?Sized;
 }
 
-pub trait SizedRefl: Refl + Sized
-where
-  Self::Refl: Sized,
-{
-}
-
 impl<T: ?Sized> Refl for T
 {
   type Refl = T;
 }
 
-impl<T> SizedRefl for T {}
-
 pub trait HasRefl<T1: ?Sized, T2: ?Sized>: Sized
 {
-  type T1: Refl<Refl = Self::T2> + ?Sized;
-  type T2: Refl<Refl = Self::T1> + ?Sized;
+  type Left: Refl<Refl = Self::Right> + ?Sized;
+  type Right: Refl<Refl = Self::Left> + ?Sized;
 }
 
 impl<A, T: ?Sized> HasRefl<T, T> for A
 {
-  type T1 = T;
-  type T2 = T;
+  type Left = T;
+  type Right = T;
+}
+
+pub trait HasRefl2<T1: ?Sized, T2: ?Sized>:
+  HasRefl<T1, T2, Left = T1, Right = T2>
+{
+}
+
+impl<A, T1: ?Sized, T2: ?Sized> HasRefl2<T1, T2> for A where
+  A: HasRefl<T1, T2, Left = T1, Right = T2>
+{
 }
 
 pub fn has_refl<T1: ?Sized, T2: ?Sized>(
-) -> impl HasRefl<T1, T2, T1 = T1, T2 = T2> + HasRefl<T2, T1, T1 = T2, T2 = T1>
+) -> impl HasRefl<T1, T2, Left = T1, Right = T2>
+     + HasRefl<T2, T1, Left = T2, Right = T1>
 where
   T1: Refl<Refl = T2>,
 {
   trait ReflWitness: Refl
   {
-    type Witness: HasRefl<Self, Self::Refl, T1 = Self, T2 = Self::Refl>
-      + HasRefl<Self::Refl, Self, T1 = Self::Refl, T2 = Self>;
+    type Witness: HasRefl<Self, Self::Refl, Left = Self, Right = Self::Refl>
+      + HasRefl<Self::Refl, Self, Left = Self::Refl, Right = Self>;
 
     fn witness() -> Self::Witness;
   }
@@ -185,7 +188,8 @@ where
   }
 
   fn has_refl_inner<T1: ?Sized, T2: ?Sized>(
-  ) -> impl HasRefl<T1, T2, T1 = T1, T2 = T2> + HasRefl<T2, T1, T1 = T2, T2 = T1>
+  ) -> impl HasRefl<T1, T2, Left = T1, Right = T2>
+       + HasRefl<T2, T1, Left = T2, Right = T1>
   where
     T1: Refl<Refl = T2>,
     T1: ReflWitness,
@@ -196,23 +200,23 @@ where
   has_refl_inner::<T1, T2>()
 }
 
-pub fn refl_symmetric<W, T1, T2>() -> impl HasRefl<T2, T1, T1 = T2, T2 = T1>
+pub fn refl_symmetric<W, T1, T2>() -> impl HasRefl<T2, T1, Left = T2, Right = T1>
 where
-  W: HasRefl<T1, T2, T1 = T1, T2 = T2>,
+  W: HasRefl<T1, T2, Left = T1, Right = T2>,
 {
   fn refl_symmetric_inner<W, T1, T2>(
-  ) -> impl HasRefl<W::T2, W::T1, T1 = W::T2, T2 = W::T1>
+  ) -> impl HasRefl<W::Right, W::Left, Left = W::Right, Right = W::Left>
   where
     W: HasRefl<T1, T2>,
   {
-    has_refl::<W::T1, W::T2>()
+    has_refl::<W::Left, W::Right>()
   }
 
   refl_symmetric_inner::<W, T1, T2>()
 }
 
 pub fn refl_transitive<T1: ?Sized, T2: ?Sized, T3: ?Sized>(
-) -> impl HasRefl<T1, T3, T1 = T1, T2 = T3>
+) -> impl HasRefl<T1, T3, Left = T1, Right = T3>
 where
   T1: Refl<Refl = T2>,
   T2: Refl<Refl = T3>,
@@ -222,8 +226,8 @@ where
     type Witness: HasRefl<
       Self,
       <Self::Refl as Refl>::Refl,
-      T1 = Self,
-      T2 = <Self::Refl as Refl>::Refl,
+      Left = Self,
+      Right = <Self::Refl as Refl>::Refl,
     >;
 
     fn witness() -> Self::Witness;
@@ -236,8 +240,12 @@ where
     fn witness() -> Self::Witness {}
   }
 
-  fn refl_transitive_inner<T: ReflTransitive + ?Sized>(
-  ) -> impl HasRefl<T, <T::Refl as Refl>::Refl, T1 = T, T2 = <T::Refl as Refl>::Refl>
+  fn refl_transitive_inner<T: ReflTransitive + ?Sized>() -> impl HasRefl<
+    T,
+    <T::Refl as Refl>::Refl,
+    Left = T,
+    Right = <T::Refl as Refl>::Refl,
+  >
   {
     T::witness()
   }
