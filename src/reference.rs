@@ -60,7 +60,7 @@ impl<'a, X: 'a + ?Sized> TypeApp<'a, X> for Borrow
 
 impl TypeAppGenericUnsized for Borrow
 {
-  fn with_type_app<'a, X: 'a + ?Sized, R: 'a, Cont: 'a>(cont: Box<Cont>) -> R
+  fn with_type_app<'a, X: 'a + ?Sized, R: 'a, Cont: 'a>(cont: Cont) -> R
   where
     Self: 'a,
     Cont: TypeAppCont<'a, Self, X, R>,
@@ -118,7 +118,7 @@ impl<'a, X: 'a + ?Sized> TypeApp<'a, X> for BorrowMut
 
 impl TypeAppGenericUnsized for BorrowMut
 {
-  fn with_type_app<'a, X: 'a + ?Sized, R: 'a, Cont: 'a>(cont: Box<Cont>) -> R
+  fn with_type_app<'a, X: 'a + ?Sized, R: 'a, Cont: 'a>(cont: Cont) -> R
   where
     Self: 'a,
     Cont: TypeAppCont<'a, Self, X, R>,
@@ -136,7 +136,7 @@ impl<'a, X: 'a + ?Sized> TypeApp<'a, X> for Own
 
 impl TypeAppGenericUnsized for Own
 {
-  fn with_type_app<'a, X: 'a + ?Sized, R: 'a, Cont: 'a>(cont: Box<Cont>) -> R
+  fn with_type_app<'a, X: 'a + ?Sized, R: 'a, Cont: 'a>(cont: Cont) -> R
   where
     Self: 'a,
     Cont: TypeAppCont<'a, Self, X, R>,
@@ -184,7 +184,7 @@ impl<'a, X: 'a + ?Sized> TypeApp<'a, X> for BoxF
 
 impl TypeAppGenericUnsized for BoxF
 {
-  fn with_type_app<'a, X: 'a + ?Sized, R: 'a, Cont: 'a>(cont: Box<Cont>) -> R
+  fn with_type_app<'a, X: 'a + ?Sized, R: 'a, Cont: 'a>(cont: Cont) -> R
   where
     Self: 'a,
     Cont: TypeAppCont<'a, Self, X, R>,

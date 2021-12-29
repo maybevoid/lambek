@@ -144,25 +144,25 @@ impl<T: ?Sized> Refl for T
   type Refl = T;
 }
 
-pub trait HasReflUnrestricted<T1: ?Sized, T2: ?Sized>: Sized
+pub trait HasReflUnbounded<T1: ?Sized, T2: ?Sized>: Sized
 {
   type Left: Refl<Refl = Self::Right> + ?Sized;
   type Right: Refl<Refl = Self::Left> + ?Sized;
 }
 
-impl<A, T: ?Sized> HasReflUnrestricted<T, T> for A
+impl<A, T: ?Sized> HasReflUnbounded<T, T> for A
 {
   type Left = T;
   type Right = T;
 }
 
 pub trait HasRefl<T1: ?Sized, T2: ?Sized>:
-  HasReflUnrestricted<T1, T2, Left = T1, Right = T2>
+  HasReflUnbounded<T1, T2, Left = T1, Right = T2>
 {
 }
 
 impl<A, T1: ?Sized, T2: ?Sized> HasRefl<T1, T2> for A where
-  A: HasReflUnrestricted<T1, T2, Left = T1, Right = T2>
+  A: HasReflUnbounded<T1, T2, Left = T1, Right = T2>
 {
 }
 
@@ -197,13 +197,13 @@ where
   has_refl_inner::<T1, T2>()
 }
 
-pub fn refl_symmetric<W, T1, T2>() -> impl HasRefl<T2, T1>
+pub fn refl_symmetric<W, T1, T2>(_: W) -> impl HasRefl<T2, T1>
 where
   W: HasRefl<T1, T2>,
 {
   fn refl_symmetric_inner<W, T1, T2>() -> impl HasRefl<W::Right, W::Left>
   where
-    W: HasReflUnrestricted<T1, T2>,
+    W: HasReflUnbounded<T1, T2>,
   {
     has_refl::<W::Left, W::Right>()
   }
